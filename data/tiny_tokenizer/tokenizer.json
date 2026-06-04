@@ -1,0 +1,143 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [],
+  "normalizer": {
+    "type": "Sequence",
+    "normalizers": [
+      {
+        "type": "Lowercase"
+      }
+    ]
+  },
+  "pre_tokenizer": {
+    "type": "Whitespace"
+  },
+  "post_processor": {
+    "type": "TemplateProcessing",
+    "single": [
+      {
+        "SpecialToken": {
+          "id": "<bos>",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "<eos>",
+          "type_id": 0
+        }
+      }
+    ],
+    "pair": [
+      {
+        "SpecialToken": {
+          "id": "<bos>",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "<eos>",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "B",
+          "type_id": 1
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "<eos>",
+          "type_id": 1
+        }
+      }
+    ],
+    "special_tokens": {
+      "<bos>": {
+        "id": "<bos>",
+        "ids": [
+          1
+        ],
+        "tokens": [
+          "<bos>"
+        ]
+      },
+      "<eos>": {
+        "id": "<eos>",
+        "ids": [
+          2
+        ],
+        "tokens": [
+          "<eos>"
+        ]
+      }
+    }
+  },
+  "decoder": {
+    "type": "WordPiece",
+    "prefix": "##",
+    "cleanup": true
+  },
+  "model": {
+    "type": "WordLevel",
+    "vocab": {
+      "<pad>": 0,
+      "<bos>": 1,
+      "<eos>": 2,
+      "<unk>": 3,
+      ".": 4,
+      "a": 5,
+      "across": 6,
+      "and": 7,
+      "attention": 8,
+      "backward": 9,
+      "can": 10,
+      "compact": 11,
+      "covers": 12,
+      "dataset": 13,
+      "depth": 14,
+      "example": 15,
+      "keeps": 16,
+      "layers": 17,
+      "learns": 18,
+      "load": 19,
+      "local": 20,
+      "loss": 21,
+      "mix": 22,
+      "models": 23,
+      "nearby": 24,
+      "paths": 25,
+      "quickstart": 26,
+      "reproducible": 27,
+      "save": 28,
+      "small": 29,
+      "smoke": 30,
+      "the": 31,
+      "this": 32,
+      "to": 33,
+      "tokenizer": 34,
+      "toy": 35,
+      "training": 36,
+      "useful": 37,
+      "values": 38,
+      "verify": 39
+    },
+    "unk_token": "<unk>"
+  }
+}

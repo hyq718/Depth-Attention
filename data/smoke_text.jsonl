@@ -1,0 +1,5 @@
+{"text": "Depth Attention learns to mix useful values across nearby layers ."}
+{"text": "A compact local dataset keeps the quickstart reproducible ."}
+{"text": "Small models can verify loss backward save and load paths ."}
+{"text": "The toy tokenizer covers this smoke training example ."}
+

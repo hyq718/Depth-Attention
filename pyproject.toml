@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "depth-attention"
+dynamic = ["version", "dependencies", "optional-dependencies", "scripts"]
+description = "Depth-Attention LLaMA models and residual baselines in a LLaMA-Factory fork."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "LUMIA Group" }
+]
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 119
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "B905"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["llamafactory"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_depth_attention.py" = ["E402"]
+"tests/test_integration_smoke.py" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
