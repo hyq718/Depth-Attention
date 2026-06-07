@@ -9,7 +9,7 @@ OUTPUT_DIR=${OUTPUT_DIR:-saves/smallpile/depth_attention_410m}
 MODEL_CFG=${MODEL_CFG:-llama_config/depth_attention_410m}
 TOKENIZER=${TOKENIZER:-data/tiny_tokenizer}
 TOKENIZED=${TOKENIZED:-data/tokenized_data/smallpile}
-STRIDE=${STRIDE:-4}
+STRIDE=${STRIDE:-16}
 RECENT_WINDOW=${RECENT_WINDOW:-0}
 CROSS_LAYER_MODE=${CROSS_LAYER_MODE:-depth_softmax}
 

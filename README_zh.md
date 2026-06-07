@@ -34,7 +34,7 @@ Depth-Attention 使用参考实现字段：
   "recurrent_model": true,
   "cross_layer_pattern": "depth_softmax",
   "cross_layer_mode": "depth_softmax",
-  "depth_softmax_stride": 4,
+  "depth_softmax_stride": 16,
   "depth_recent_window": 0
 }
 ```
@@ -42,7 +42,7 @@ Depth-Attention 使用参考实现字段：
 CLI 兼容别名：
 
 ```bash
---depth_attention_stride 4
+--depth_attention_stride 16
 --depth_attention_recent_window 0
 ```
 
@@ -63,4 +63,4 @@ python -m compileall -q src tests
 python -m pytest -q
 ```
 
-本仓库基于 LLaMA-Factory，并参考 PonderLM-2 的开源发布结构组织。
+本仓库基于 LLaMA-Factory。

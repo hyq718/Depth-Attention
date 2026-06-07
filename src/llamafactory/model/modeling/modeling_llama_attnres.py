@@ -1069,15 +1069,7 @@ class LlamaAttention(nn.Module):
             self.k_norm = nn.Identity()
         self.cross_layer_mode = getattr(config, "cross_layer_mode", "residual")
         self.cross_layer_pattern = getattr(config, "cross_layer_pattern", None)
-        if self.cross_layer_mode == "depth_softmax_1head":
-            # Extra Q/K projection + norm for 1 dedicated depth-scoring head
-            self.depth_q_proj = nn.Linear(self.hidden_size, self.head_dim, bias=config.attention_bias)
-            self.depth_k_proj = nn.Linear(self.hidden_size, self.head_dim, bias=config.attention_bias)
-            self.depth_q_norm = LlamaRMSNorm(self.head_dim, eps=config.rms_norm_eps)
-            self.depth_k_norm = LlamaRMSNorm(self.head_dim, eps=config.rms_norm_eps)
-        if self.cross_layer_mode == "gate":
-            self.cross_gate = nn.Linear(self.hidden_size, self.num_heads, bias=True)
-        elif self.cross_layer_pattern == "dense":
+        if self.cross_layer_pattern == "dense":
             # Only dense mode uses v_norm (residual addition needs normalization)
             self.v_norm = LlamaRMSNorm(self.head_dim, eps=config.rms_norm_eps)
         # TODO (joao): remove in v4.46 (RoPE is computed in the model, not in the decoder layers)
@@ -1237,12 +1229,8 @@ class LlamaAttention(nn.Module):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
-        # Default layer_kv_for_reuse: 2-tuple for most modes, 3-tuple for depth_softmax_1head
-        if self.cross_layer_mode == "depth_softmax_1head":
-            depth_self_k_raw = self.depth_k_proj(hidden_states).unsqueeze(1)
-            layer_kv_for_reuse = (key_states, value_states, depth_self_k_raw)
-        else:
-            layer_kv_for_reuse = (key_states, value_states)
+        # Default layer_kv_for_reuse: 2-tuple for most modes, 3-tuple for depth-mix auxiliary layout
+        layer_kv_for_reuse = (key_states, value_states)
         kv_expanded = False
 
         if cross_layer_kv:
@@ -1254,17 +1242,8 @@ class LlamaAttention(nn.Module):
                 if kv[0] is None or kv[1] is None:
                     continue
                 valid_cross.append((kv[0], kv[1]))  # always (K, V) for standard branches
-            # For depth_softmax_1head, also collect depth_k (3rd element) separately
+            # For depth-mix auxiliary layout, also collect depth_k (3rd element) separately
             valid_cross_depth_k = []
-            if self.cross_layer_mode == "depth_softmax_1head":
-                for kv in cross_layer_kv:
-                    if kv is None or len(kv) < 2:
-                        valid_cross_depth_k.append(None)
-                        continue
-                    if kv[0] is None or kv[1] is None:
-                        continue
-                    valid_cross_depth_k.append(kv[2] if len(kv) >= 3 else None)
-
             if valid_cross:
                 self_k = repeat_kv(key_states, self.num_key_value_groups)
                 self_v = repeat_kv(value_states, self.num_key_value_groups)
@@ -1349,46 +1328,6 @@ class LlamaAttention(nn.Module):
 
                     layer_kv_for_reuse = (self_k, value_states)  # store depth-mixed V
                     key_states = self_k_normed  # already k_normed, no double norm
-                    if hasattr(self, "v_norm"):
-                        value_states = self.v_norm(value_states)
-                elif self.cross_layer_mode == "depth_softmax_1head" and len(valid_cross) >= 1:
-                    # 1-head depth softmax with dedicated depth_q/depth_k projections.
-                    # depth_k is stored as 3rd element in layer_kv_for_reuse: (K, V, depth_k)
-                    grp = self.num_key_value_groups
-                    scale = math.sqrt(self.head_dim)
-
-                    depth_q = self.depth_q_norm(self.depth_q_proj(hidden_states).unsqueeze(1))  # [B, 1, T, d]
-                    depth_self_k_raw = self.depth_k_proj(hidden_states).unsqueeze(1)  # [B, 1, T, d] raw
-
-                    # Collect cross depth_k (raw) and apply current layer's depth_k_norm
-                    all_depth_k = []
-                    for i, (k, v) in enumerate(valid_cross):
-                        dk = valid_cross_depth_k[i] if i < len(valid_cross_depth_k) else None
-                        dk = dk if dk is not None else k[:, 0:1, :, :]
-                        all_depth_k.append(self.depth_k_norm(dk))
-                    all_depth_k.append(self.depth_k_norm(depth_self_k_raw))
-
-                    all_v = [repeat_kv(v, grp) for _, v in valid_cross] + [self_v] if grp > 1 \
-                            else [v for _, v in valid_cross] + [self_v]
-
-                    depth_scores = torch.stack(
-                        [(depth_q * k).sum(-1) / scale for k in all_depth_k], dim=-1
-                    )
-                    depth_weights = torch.nn.functional.softmax(
-                        depth_scores, dim=-1, dtype=torch.float32
-                    ).to(query_states.dtype)
-
-                    stacked_v = torch.stack(all_v, dim=0)
-                    value_states = torch.einsum(
-                        "bhtn,nbhtd->bhtd",
-                        depth_weights.expand(-1, self.num_heads, -1, -1),
-                        stacked_v,
-                    )
-
-                    key_states = self_k
-                    # Store raw depth_k (without norm) — downstream layers apply their own depth_k_norm
-                    layer_kv_for_reuse = (key_states, value_states, depth_self_k_raw)  # store depth-mixed V
-                    key_states = self.k_norm(key_states)
                     if hasattr(self, "v_norm"):
                         value_states = self.v_norm(value_states)
                 elif self.cross_layer_mode == "depth_softmax_head0" and len(valid_cross) >= 1:
@@ -1519,37 +1458,6 @@ class LlamaAttention(nn.Module):
                     layer_kv_for_reuse = (key_states, value_states)  # store depth-mixed V
                     key_states = self.k_norm(key_states)
                     kv_expanded = True
-                elif self.cross_layer_mode == "cross_attn_lse" and len(valid_cross) >= 1:
-                    # Cross attention with LSE merge (eager path → use multi_flash_attn)
-                    layer_kv_for_reuse = (self_k, self_v)
-                    q_fa = query_states.transpose(1, 2).contiguous()
-                    kv_pairs = []
-                    for k_src, v_src in valid_cross:
-                        kv_pairs.append((self.k_norm(k_src).transpose(1, 2).contiguous(), v_src.transpose(1, 2).contiguous()))
-                    kv_pairs.append((self.k_norm(self_k).transpose(1, 2).contiguous(), self_v.transpose(1, 2).contiguous()))
-                    dropout_p = self.attention_dropout if self.training else 0.0
-                    out_fa = multi_flash_attn(q_fa, kv_pairs, dropout_p=dropout_p, causal=True)
-                    attn_output = out_fa.reshape(bsz, q_len, -1).contiguous()
-                    attn_output = self.o_proj(attn_output)
-                    if return_layer_kv:
-                        return attn_output, None, past_key_value, layer_kv_for_reuse
-                    return attn_output, None, past_key_value
-                elif self.cross_layer_mode == "gate":
-                    if len(valid_cross) == 1:
-                        cross_k = repeat_kv(valid_cross[0][0], self.num_key_value_groups)
-                        cross_v = repeat_kv(valid_cross[0][1], self.num_key_value_groups)
-                    else:
-                        cross_k = torch.stack(
-                            [repeat_kv(k, self.num_key_value_groups) for k, _ in valid_cross]
-                        ).mean(0)
-                        cross_v = torch.stack(
-                            [repeat_kv(v, self.num_key_value_groups) for _, v in valid_cross]
-                        ).mean(0)
-                    gate = torch.sigmoid(self.cross_gate(hidden_states))
-                    gate = gate.transpose(1, 2).unsqueeze(-1)  # [B, num_heads, L, 1]
-                    key_states = gate * self_k + (1.0 - gate) * cross_k
-                    value_states = gate * self_v + (1.0 - gate) * cross_v
-                    key_states = self.k_norm(key_states)
                 else:
                     if len(valid_cross) == 1:
                         cross_k = repeat_kv(valid_cross[0][0], self.num_key_value_groups)
@@ -1809,7 +1717,7 @@ class LlamaSdpaAttention(LlamaAttention):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
-        # Default layer_kv_for_reuse: 2-tuple for most modes, 3-tuple for depth_softmax_1head
+        # Default layer_kv_for_reuse: 2-tuple for most modes, 3-tuple for depth-mix auxiliary layout
         # OPTIMIZATION: for depth_softmax variants, pre-normalize K here so downstream
         # layers can skip the expensive batched k_norm (~800ms/step savings).
         # Compute k_norm(key_states) ONCE here and reuse everywhere (branch + SDPA path).
@@ -1824,19 +1732,12 @@ class LlamaSdpaAttention(LlamaAttention):
         # memory + bandwidth vs head0_v2 which still stores full-H K/V.
         _is_depth_softmax_family = self.cross_layer_mode in (
             "depth_softmax", "depth_softmax_head0",
-            "depth_softmax_head0_v3", "depth_softmax_head0_v4",
-            "depth_softmax_1head",
-        )
+            "depth_softmax_head0_v3", "depth_softmax_head0_v4",        )
         _kn_precomputed = None  # pre-computed self.k_norm(key_states), only for grp==1 depth_softmax
         _depth_k_precomputed = None  # pre-computed self.depth_k_norm(depth_k_proj(x)), only for 1head
         if _is_depth_softmax_family and self.num_key_value_groups == 1:
             _kn_precomputed = self.k_norm(key_states)
-            if self.cross_layer_mode == "depth_softmax_1head":
-                depth_self_k_raw = self.depth_k_proj(hidden_states).unsqueeze(1)
-                _depth_k_precomputed = self.depth_k_norm(depth_self_k_raw)
-                # None for main K — not consumed downstream (see comment above)
-                layer_kv_for_reuse = (None, value_states, _depth_k_precomputed)
-            elif self.cross_layer_mode in ("depth_softmax_head0_v3", "depth_softmax_head0_v4"):
+            if self.cross_layer_mode in ("depth_softmax_head0_v3", "depth_softmax_head0_v4"):
                 # Store ONLY head 0 of pre-normed K and head 0 of V. Downstream
                 # head0_v3/v4 layers read just these 1-head slices.
                 layer_kv_for_reuse = (
@@ -1845,12 +1746,6 @@ class LlamaSdpaAttention(LlamaAttention):
                 )
             else:
                 layer_kv_for_reuse = (_kn_precomputed, value_states)
-        elif self.cross_layer_mode == "depth_softmax_1head":
-            # grp > 1 case for 1head
-            depth_self_k_raw = self.depth_k_proj(hidden_states).unsqueeze(1)
-            _depth_k_precomputed = self.depth_k_norm(depth_self_k_raw)
-            # None for main K — not consumed downstream (see comment above)
-            layer_kv_for_reuse = (None, value_states, _depth_k_precomputed)
         else:
             layer_kv_for_reuse = (key_states, value_states)
         dropout_p = self.attention_dropout if self.training else 0.0
@@ -1884,13 +1779,13 @@ class LlamaSdpaAttention(LlamaAttention):
             # For list format: build valid_cross list as before
             # For stacked format: mark valid_cross as non-empty sentinel
             valid_cross = []
-            _is_1head = self.cross_layer_mode == "depth_softmax_1head"
+            _is_1head = False
             if _stacked_cross_k is not None:
                 # Use a single-element list as "non-empty" sentinel; downstream branches
                 # check _stacked_cross_k first
                 valid_cross = [(None, None)] * _stacked_cross_k.shape[0]
             elif _stacked_cross_v is not None:
-                # 1head stacked format: main K is None, use V's N for the sentinel
+                # stacked format: main K is None, use V's N for the sentinel
                 valid_cross = [(None, None)] * _stacked_cross_v.shape[0]
             else:
                 for kv in cross_layer_kv:
@@ -1898,9 +1793,7 @@ class LlamaSdpaAttention(LlamaAttention):
                         continue
                     if kv[1] is None:
                         continue
-                    # 1head may store None for main K (not consumed downstream);
-                    # other modes require main K.
-                    if kv[0] is None and not _is_1head:
+                    #                     if kv[0] is None and not _is_1head:
                         continue
                     valid_cross.append((kv[0], kv[1]))
             valid_cross_depth_k = []
@@ -2011,66 +1904,6 @@ class LlamaSdpaAttention(LlamaAttention):
                     # Store pre-normed K (key optimization!) + depth-mixed V
                     layer_kv_for_reuse = (self_k_normed, mixed_v)
                     mixed_k = self_k_normed  # already k_normed
-                    if hasattr(self, "v_norm"):
-                        mixed_v = self.v_norm(mixed_v)
-                elif self.cross_layer_mode == "depth_softmax_1head" and len(valid_cross) >= 1:
-                    # 1-head depth softmax (SDPA path) — stores pre-normed depth_k
-                    grp = self.num_key_value_groups
-                    scale = math.sqrt(self.head_dim)
-
-                    depth_q = self.depth_q_norm(self.depth_q_proj(hidden_states).unsqueeze(1))  # [B,1,T,d]
-                    # Reuse depth_k_norm(depth_k_proj(hidden)) computed once in the default
-                    # assignment. Avoids a duplicate matmul+RMSNorm in the branch.
-                    depth_self_k_normed = _depth_k_precomputed
-
-                    # Use pre-stacked buffer if available
-                    if _stacked_cross_dk is not None:
-                        cross_dk_normed_stacked = _stacked_cross_dk  # [N, B, 1, T, d]
-                        cross_v_stacked = _stacked_cross_v
-                    else:
-                        # Fallback list path: cross depth_k is pre-normed at source layer
-                        # (stored as layer_kv[2]). Main K may be None in this mode.
-                        cross_dk_normed = []
-                        for i in range(len(valid_cross)):
-                            dk = valid_cross_depth_k[i] if i < len(valid_cross_depth_k) else None
-                            if dk is None:
-                                # This shouldn't happen for valid 1head layers; skip entry
-                                continue
-                            cross_dk_normed.append(dk)
-                        cross_dk_normed_stacked = torch.stack(cross_dk_normed, dim=0)
-                        if grp > 1:
-                            cross_v_stacked = torch.stack([repeat_kv(v, grp) for _, v in valid_cross], dim=0)
-                        else:
-                            cross_v_stacked = torch.stack([v for _, v in valid_cross], dim=0)
-
-                    # --- Split-scoring: avoid 5D cat ---
-                    cross_scores = torch.einsum("bhtd,nbhtd->bhtn", depth_q, cross_dk_normed_stacked) / scale
-                    self_score = (depth_q * depth_self_k_normed).sum(-1, keepdim=True) / scale
-                    depth_scores = torch.cat([cross_scores, self_score], dim=-1)
-
-                    depth_weights = torch.nn.functional.softmax(
-                        depth_scores, dim=-1, dtype=torch.float32
-                    ).to(query_states.dtype)
-
-                    # --- Split-weighted V ---
-                    # Tier A opt: drop the stride-0 .expand() on cross_weights so the
-                    # einsum sees real [B,T,N] instead of a broadcast [B,H,T,N]. Gives
-                    # PyTorch a cleaner shot at a fused cuBLAS GEMM. Mathematically
-                    # equivalent: out[b,h,t,d] = sum_n w[b,t,n] * V[n,b,h,t,d].
-                    cross_weights_btn = depth_weights[..., :-1].squeeze(1)  # [B, T, N]
-                    self_weight = depth_weights[..., -1:]                    # [B, 1, T, 1]
-                    cross_mixed = torch.einsum("btn,nbhtd->bhtd", cross_weights_btn, cross_v_stacked)
-                    # self_weight broadcasts [B,1,T,1] * [B,H,T,d] → [B,H,T,d] naturally.
-                    mixed_v = cross_mixed + self_weight * self_v
-
-                    # Reuse pre-computed k_norm(key_states) for current-layer self-attention.
-                    if _kn_precomputed is not None:
-                        self_k_normed = _kn_precomputed
-                    else:
-                        self_k_normed = self.k_norm(self_k)
-                    # Main K (kv[0]) stays None — 1head downstream never reads it.
-                    layer_kv_for_reuse = (None, mixed_v, depth_self_k_normed)  # store depth-mixed V
-                    mixed_k = self_k_normed
                     if hasattr(self, "v_norm"):
                         mixed_v = self.v_norm(mixed_v)
                 elif self.cross_layer_mode == "depth_softmax_head0" and len(valid_cross) >= 1:
@@ -2339,50 +2172,6 @@ class LlamaSdpaAttention(LlamaAttention):
                     mixed_v = 0.5 * cross_v + 0.5 * self_v
                     mixed_k = self_k
                     layer_kv_for_reuse = (mixed_k, mixed_v)  # store depth-mixed V
-                    mixed_k = self.k_norm(mixed_k)
-                elif self.cross_layer_mode == "cross_attn_lse" and len(valid_cross) >= 1:
-                    # Cross attention with LSE merge: multi-segment flash attention
-                    # Each cross KV source + self KV is a separate flash-attn segment,
-                    # merged via log-sum-exp for exact joint softmax gradients.
-                    layer_kv_for_reuse = (self_k, self_v)
-
-                    # flash-attn expects [B, L, H, d]; apply k_norm to all K segments
-                    q_fa = query_states.transpose(1, 2).contiguous()
-                    kv_pairs = []
-                    for k_src, v_src in valid_cross:
-                        kv_pairs.append((
-                            self.k_norm(k_src).transpose(1, 2).contiguous(),
-                            v_src.transpose(1, 2).contiguous(),
-                        ))
-                    # self segment last
-                    kv_pairs.append((
-                        self.k_norm(self_k).transpose(1, 2).contiguous(),
-                        self_v.transpose(1, 2).contiguous(),
-                    ))
-
-                    dropout_p = self.attention_dropout if self.training else 0.0
-                    out_fa = multi_flash_attn(q_fa, kv_pairs, dropout_p=dropout_p, causal=True)
-                    attn_output = out_fa.reshape(bsz, q_len, -1).contiguous()
-                    attn_output = self.o_proj(attn_output)
-
-                    if return_layer_kv:
-                        return attn_output, None, past_key_value, layer_kv_for_reuse
-                    return attn_output, None, past_key_value
-                elif self.cross_layer_mode == "gate":
-                    if len(valid_cross) == 1:
-                        cross_k = repeat_kv(valid_cross[0][0], self.num_key_value_groups)
-                        cross_v = repeat_kv(valid_cross[0][1], self.num_key_value_groups)
-                    else:
-                        cross_k = torch.stack(
-                            [repeat_kv(k, self.num_key_value_groups) for k, _ in valid_cross]
-                        ).mean(0)
-                        cross_v = torch.stack(
-                            [repeat_kv(v, self.num_key_value_groups) for _, v in valid_cross]
-                        ).mean(0)
-                    gate = torch.sigmoid(self.cross_gate(hidden_states))
-                    gate = gate.transpose(1, 2).unsqueeze(-1)
-                    mixed_k = gate * self_k + (1.0 - gate) * cross_k
-                    mixed_v = gate * self_v + (1.0 - gate) * cross_v
                     mixed_k = self.k_norm(mixed_k)
                 else:
                     if len(valid_cross) == 1:
@@ -3688,11 +3477,11 @@ class LlamaModel(LlamaPreTrainedModel):
             and _ds_recent_window <= 0
             # depth_softmax_head0_v2 branch expects list format with raw K and
             # re-applies self.k_norm per layer; it does not support stacked tuples.
-            and _ds_mode not in ("v0_mix", "cross_attn_lse", "depth_softmax_head0_v2")
+            and _ds_mode not in ("v0_mix", "depth_softmax_head0_v2")
         )
         _depth_k_stacked = None  # [N, B, H, T, d]
         _depth_v_stacked = None
-        _depth_dk_stacked = None  # [N, B, 1, T, d] only for depth_softmax_1head
+        _depth_dk_stacked = None  # [N, B, 1, T, d] only for depth-mix auxiliary layout
 
         try:
             import torch.distributed as dist
@@ -3713,12 +3502,12 @@ class LlamaModel(LlamaPreTrainedModel):
                 # The attention module (cross_attn mode) will concat them along seq dim
                 cross_layer_kv = all_attention_kv_list
             elif use_depth_softmax and len(depth_kv_list) > 0:
-                if _ds_mode in ("v0_mix", "cross_attn_lse"):
-                    # v0_mix / cross_attn_lse: only need layer 0's KV
+                if _ds_mode == "v0_mix":
+                    # v0_mix: only need layer 0's KV
                     cross_layer_kv = [depth_kv_list[0]]
                 elif _use_incremental_stack and _depth_v_stacked is not None:
                     # OPTIMIZATION: use pre-built stacked buffer instead of re-stacking.
-                    # For depth_softmax_1head, _depth_k_stacked is None (main K is not
+                    # For depth-mix auxiliary layout, _depth_k_stacked is None (main K is not
                     # consumed downstream); pass None in position 0 so SDPA detects the
                     # 1head stacked layout.
                     if _depth_k_stacked is None and _depth_dk_stacked is not None:

@@ -143,7 +143,7 @@ The repository ships 410M-class GQA4x configs and one launcher per method. This
 is the easiest way to sanity-check Depth-Attention against the included
 cross-layer baselines before running larger paper-scale experiments.
 
-The corpus layout matches the tokenized `smallpile` setup used by PonderLM-2:
+The companion scripts expect a tokenized `smallpile` directory:
 
 ```bash
 mkdir -p data/tokenized_data
@@ -190,7 +190,7 @@ For Depth-Attention, the key config fields are:
   "recurrent_model": true,
   "cross_layer_pattern": "depth_softmax",
   "cross_layer_mode": "depth_softmax",
-  "depth_softmax_stride": 4,
+  "depth_softmax_stride": 16,
   "depth_recent_window": 0,
   "use_qk_norm": true
 }
@@ -214,8 +214,8 @@ This exercises the native-KV GQA path used by the reference implementation.
 | Flag | Default | Method | Meaning |
 |---|---:|---|---|
 | `--patch_method` | unset | all | Which Llama implementation to swap in. |
-| `--cross_layer_mode` | config / `depth_softmax` | Depth-Attention | Depth scoring/mixing variant, e.g. `depth_softmax`, `depth_softmax_1head`, `cross_attn_lse`, `gate`. |
-| `--depth_attention_stride` | config / `1` | Depth-Attention | Select every Nth previous layer for depth mixing. |
+| `--cross_layer_mode` | config / `depth_softmax` | Depth-Attention | Depth scoring/mixing mode. This release supports `depth_softmax`. |
+| `--depth_attention_stride` | config / half the layer count | Depth-Attention | Select every Nth previous layer for depth mixing. |
 | `--depth_attention_recent_window` | config / `0` | Depth-Attention | Always include this many most-recent previous layers. |
 | `--use_qk_norm` | config | Depth-Attention / baselines | Override q/k head RMSNorm. |
 | `--attnres_block_size` | config / `12` | AttnRes | Block size for the block residual-attention baseline. |
@@ -292,8 +292,6 @@ unavailable.
 ## Acknowledgements
 
 Built on [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory)
-(Apache-2.0) and organized in the release style of
-[LUMIA-Group/PonderLM-2](https://github.com/LUMIA-Group/PonderLM-2)
 (Apache-2.0).
 
 ## Contact

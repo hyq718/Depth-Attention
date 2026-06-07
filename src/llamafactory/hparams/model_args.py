@@ -207,15 +207,19 @@ class ModelArguments(QuantizationArguments, ProcessorArguments, ExportArguments,
         default=None,
         metadata={
             "help": (
-                "Depth-Attention scoring mode, e.g. depth_softmax, depth_softmax_1head, depth_softmax_head0, "
-                "depth_softmax_head0_v2/v3/v4, v0_mix, cross_attn, cross_attn_lse, gate. "
-                "Leave unset to use the config or depth_softmax."
+                "Depth-Attention scoring mode. This release supports `depth_softmax`; leave unset to use the config."
             )
         },
     )
     depth_attention_stride: Optional[int] = field(
         default=None,
-        metadata={"help": "Stride for selecting previous layers in Depth-Attention. Leave unset to use the config."},
+        metadata={
+            "help": (
+                "Stride for selecting previous layers in Depth-Attention. Leave unset to use the config, "
+                "or the implementation default when the config does not set it. For paper-style runs, use half "
+                "of the layer count."
+            )
+        },
     )
     depth_attention_recent_window: Optional[int] = field(
         default=None,

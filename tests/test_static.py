@@ -20,7 +20,7 @@ def test_public_configs_use_reference_fields():
     assert depth_cfg["recurrent_model"] is True
     assert depth_cfg["cross_layer_pattern"] == "depth_softmax"
     assert depth_cfg["cross_layer_mode"] == "depth_softmax"
-    assert depth_cfg["depth_softmax_stride"] == 4
+    assert depth_cfg["depth_softmax_stride"] == depth_cfg["num_hidden_layers"] // 2
     assert depth_cfg["num_attention_heads"] // depth_cfg["num_key_value_heads"] == 4
 
     expected_baselines = {
@@ -75,3 +75,25 @@ def test_patch_method_strings_are_depth_attention_specific():
     for method in ["depth_attention", "attnres", "denseformer", "mhc"]:
         assert method in patch_file
     assert "ponderlm" not in patch_file.lower()
+
+
+def test_depth_attention_release_exposes_only_depth_softmax_mode():
+    forbidden_modes = [
+        "depth_softmax_" + "1head",
+        "cross_attn_" + "lse",
+        '"' + "g" + "ate" + '"',
+    ]
+    paths = [
+        ROOT / "README.md",
+        ROOT / "README_zh.md",
+        ROOT / "src" / "llamafactory" / "hparams" / "model_args.py",
+        ROOT / "src" / "llamafactory" / "model" / "loader.py",
+    ]
+    paths.extend((ROOT / "src" / "llamafactory" / "model" / "modeling").glob("modeling_llama_*.py"))
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        for mode in forbidden_modes:
+            assert mode not in text, f"{mode!r} found in {path.relative_to(ROOT)}"
+
+    loader_text = (ROOT / "src" / "llamafactory" / "model" / "loader.py").read_text(encoding="utf-8")
+    assert "default_" + "depth_stride" not in loader_text

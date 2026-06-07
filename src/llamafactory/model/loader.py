@@ -175,7 +175,12 @@ def load_model(
         config.use_qk_norm = model_args.use_qk_norm
 
     depth_stride = _arg_or_config(
-        model_args, config, "depth_attention_stride", "depth_softmax_stride", "depth_attention_stride", default=1
+        model_args,
+        config,
+        "depth_attention_stride",
+        "depth_softmax_stride",
+        "depth_attention_stride",
+        default=1,
     )
     depth_recent_window = _arg_or_config(
         model_args, config, "depth_attention_recent_window", "depth_recent_window", "depth_attention_recent_window", default=0
@@ -189,6 +194,8 @@ def load_model(
     config.depth_attention_recent_window = depth_recent_window
 
     if model_args.patch_method == "depth_attention":
+        if cross_layer_mode != "depth_softmax":
+            raise ValueError("Depth-Attention release only supports cross_layer_mode='depth_softmax'.")
         config.recurrent_model = True
         config.cross_layer_pattern = "depth_softmax"
         config.cross_layer_mode = cross_layer_mode

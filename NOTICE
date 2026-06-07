@@ -9,9 +9,5 @@ This product includes software derived from LLaMA-Factory
 (https://github.com/hiyouga/LLaMA-Factory), licensed under the Apache License,
 Version 2.0.
 
-This product follows the release structure and selected training-stack files of
-LUMIA-Group/PonderLM-2 (https://github.com/LUMIA-Group/PonderLM-2), licensed
-under the Apache License, Version 2.0.
-
 The Depth-Attention and baseline Llama modeling files are adapted from the
 project reference implementations maintained by LUMIA Group.

@@ -27,10 +27,10 @@
   "recurrent_model": true,
   "cross_layer_pattern": "depth_softmax",
   "cross_layer_mode": "depth_softmax",
-  "depth_softmax_stride": 4,
+  "depth_softmax_stride": 16,
   "depth_recent_window": 0,
   "use_depth_attention": true,
-  "depth_attention_stride": 4,
+  "depth_attention_stride": 16,
   "depth_attention_recent_window": 0,
   "use_qk_norm": true,
   "scale_embeds": false
