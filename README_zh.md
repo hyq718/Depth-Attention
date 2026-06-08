@@ -46,15 +46,33 @@ CLI 兼容别名：
 --depth_attention_recent_window 0
 ```
 
+## 已开源 checkpoint
+
+已训练 checkpoint 发布在 [zeng123](https://huggingface.co/zeng123)：
+
+| 规模 | 方法 | Hugging Face | 模型配置 | 训练 recipe |
+|---|---|---|---|---|
+| 1.5B | DenseFormer | [zeng123/1.5b-denseformer-qknorm-gqa-4x](https://huggingface.co/zeng123/1.5b-denseformer-qknorm-gqa-4x) | `llama_config/released/1.5b_denseformer_qknorm_gqa4x` | `examples/released_models/train_1.5b_denseformer_qknorm_gqa4x.yaml` |
+| 1.5B | mHC | [zeng123/1.5b-mhc-qknorm-gqa-4x](https://huggingface.co/zeng123/1.5b-mhc-qknorm-gqa-4x) | `llama_config/released/1.5b_mhc_qknorm_gqa4x` | `examples/released_models/train_1.5b_mhc_qknorm_gqa4x.yaml` |
+| 3B | DenseFormer | [zeng123/3b-denseformer-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-denseformer-qknorm-gqa-4x) | `llama_config/released/3b_denseformer_qknorm_gqa4x` | `examples/released_models/train_3b_denseformer_qknorm_gqa4x.yaml` |
+| 3B | mHC | [zeng123/3b-mhc-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-mhc-qknorm-gqa-4x) | `llama_config/released/3b_mhc_qknorm_gqa4x` | `examples/released_models/train_3b_mhc_qknorm_gqa4x.yaml` |
+
+四个 checkpoint 都使用 QK norm 和 GQA4x。1.5B 配置为 48 层、hidden size
+1536、24 个 attention heads、6 个 KV heads；3B 配置为 48 层、hidden size
+2048、32 个 attention heads、8 个 KV heads。训练 recipe 根据 checkpoint
+导出的 `config.json` 和 Trainer model card 整理；集群下载可设置
+`HF_ENDPOINT=https://hf-mirror.com`。
+
 ## 目录结构
 
 - `src/llamafactory/model/modeling/modeling_llama_depth_attention.py`：Depth-Attention 主实现。
 - `src/llamafactory/model/modeling/modeling_llama_attnres.py`：Block AttnRes baseline。
 - `src/llamafactory/model/modeling/modeling_llama_denseformer.py`：DenseFormer baseline。
 - `src/llamafactory/model/modeling/modeling_llama_mhc.py`：mHC baseline。
-- `llama_config/`：tiny 和 410M-class GQA4x 配置。
+- `llama_config/`：tiny、410M-class 和 released 1.5B/3B GQA4x 配置。
 - `scripts/`：quickstart 和各方法训练脚本。
 - `examples/deepspeed/`：ZeRO 配置。
+- `examples/released_models/`：released checkpoint 的训练 recipe。
 
 ## 检查
 

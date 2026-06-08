@@ -60,7 +60,9 @@ comparison paths.
 Depth-Attention/
 ├── scripts/                         # quickstart + one launcher per method
 ├── llama_config/                    # tiny and 410M-class GQA4x configs
+├── llama_config/released/           # 1.5B / 3B released checkpoint configs
 ├── examples/deepspeed/              # ZeRO configs
+├── examples/released_models/        # training recipes for released models
 ├── data/dataset_info.json           # smoke_text, minipile, smallpile, testpile
 └── src/llamafactory/model/
     ├── llama_patch.py               # method swap entry point
@@ -70,6 +72,31 @@ Depth-Attention/
         ├── modeling_llama_denseformer.py
         └── modeling_llama_mhc.py
 ```
+
+---
+
+## Released checkpoints
+
+The following trained checkpoints are released under
+[zeng123](https://huggingface.co/zeng123) on Hugging Face:
+
+| Size | Method | Checkpoint | Model config | Training recipe |
+|---|---|---|---|---|
+| 1.5B | DenseFormer | [zeng123/1.5b-denseformer-qknorm-gqa-4x](https://huggingface.co/zeng123/1.5b-denseformer-qknorm-gqa-4x) | `llama_config/released/1.5b_denseformer_qknorm_gqa4x` | `examples/released_models/train_1.5b_denseformer_qknorm_gqa4x.yaml` |
+| 1.5B | mHC | [zeng123/1.5b-mhc-qknorm-gqa-4x](https://huggingface.co/zeng123/1.5b-mhc-qknorm-gqa-4x) | `llama_config/released/1.5b_mhc_qknorm_gqa4x` | `examples/released_models/train_1.5b_mhc_qknorm_gqa4x.yaml` |
+| 3B | DenseFormer | [zeng123/3b-denseformer-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-denseformer-qknorm-gqa-4x) | `llama_config/released/3b_denseformer_qknorm_gqa4x` | `examples/released_models/train_3b_denseformer_qknorm_gqa4x.yaml` |
+| 3B | mHC | [zeng123/3b-mhc-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-mhc-qknorm-gqa-4x) | `llama_config/released/3b_mhc_qknorm_gqa4x` | `examples/released_models/train_3b_mhc_qknorm_gqa4x.yaml` |
+
+The 1.5B configs use 48 layers, hidden size 1536, 24 attention heads, and
+6 KV heads. The 3B configs use 48 layers, hidden size 2048, 32 attention
+heads, and 8 KV heads. All four checkpoints use QK norm and GQA4x.
+
+The released training recipes are assembled from each checkpoint's exported
+`config.json` and Trainer-generated model card. They record the public
+smallpile recipe: 32 devices, per-device batch size 4, gradient accumulation
+8, global batch size 1024, AdamW with betas `(0.9, 0.95)`, cosine-with-min-lr
+scheduling, warmup ratio 0.02, and 1 epoch. Use `HF_ENDPOINT=https://hf-mirror.com`
+when downloading from networks that require the Hugging Face mirror.
 
 ---
 
@@ -255,10 +282,20 @@ The Llama path supports the standard Hugging Face cache interface, so
 For baseline checkpoints, use the matching patch function:
 
 ```python
-from llamafactory.model.llama_patch import patch_llama_attnres
+from llamafactory.model.llama_patch import patch_llama_denseformer
 
-patch_llama_attnres()
+patch_llama_denseformer()
+
+from transformers import AutoModelForCausalLM
+
+model = AutoModelForCausalLM.from_pretrained(
+    "zeng123/3b-denseformer-qknorm-gqa-4x",
+    trust_remote_code=True,
+)
 ```
+
+For mHC checkpoints, use `patch_llama_mhc()` and the corresponding
+`zeng123/*-mhc-qknorm-gqa-4x` checkpoint.
 
 ---
 

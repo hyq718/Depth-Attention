@@ -1,0 +1,45 @@
+# Reproduction recipe for zeng123/3b-mhc-qknorm-gqa-4x.
+# The exported model card records 32 devices, per-device batch 4,
+# gradient accumulation 8, and total train batch size 1024.
+model_name_or_path: llama_config/released/3b_mhc_qknorm_gqa4x
+tokenizer_name_or_path: path/to/tokenizer
+stage: pt
+do_train: true
+do_eval: true
+finetuning_type: full
+train_from_scratch: true
+tokenized_path: data/tokenized_data/smallpile
+dataset: smallpile
+eval_dataset: testpile
+template: default
+cutoff_len: 2048
+num_train_epochs: 1.0
+save_steps: 5000
+save_total_limit: 3
+eval_steps: 5000
+evaluation_strategy: steps
+logging_steps: 1
+plot_loss: true
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 8
+per_device_eval_batch_size: 4
+learning_rate: 0.001
+lr_scheduler_type: cosine_with_min_lr
+lr_scheduler_kwargs: '{"min_lr_rate":0.1}'
+warmup_ratio: 0.02
+adam_beta1: 0.9
+adam_beta2: 0.95
+adam_epsilon: 1.0e-8
+optim: adamw_torch
+weight_decay: 0.1
+seed: 42
+bf16: true
+flash_attn: fa2
+disable_gradient_checkpointing: true
+dataloader_num_workers: 16
+ddp_timeout: 180000000
+deepspeed: examples/deepspeed/ds_z0_config.json
+report_to: wandb
+patch_method: mhc
+residual_baseline_num_streams: 4
+output_dir: saves/smallpile/3b_mhc_qknorm_gqa4x
