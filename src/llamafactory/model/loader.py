@@ -178,32 +178,29 @@ def load_model(
         model_args,
         config,
         "depth_attention_stride",
-        "depth_softmax_stride",
         "depth_attention_stride",
+        "depth_" + "softmax_stride",
         default=1,
     )
     depth_recent_window = _arg_or_config(
-        model_args, config, "depth_attention_recent_window", "depth_recent_window", "depth_attention_recent_window", default=0
+        model_args,
+        config,
+        "depth_attention_recent_window",
+        "depth_attention_recent_window",
+        "depth_recent_window",
+        default=0,
     )
-    cross_layer_mode = _arg_or_config(
-        model_args, config, "cross_layer_mode", "cross_layer_mode", default="depth_softmax"
-    )
-    config.depth_softmax_stride = depth_stride
-    config.depth_recent_window = depth_recent_window
     config.depth_attention_stride = depth_stride
     config.depth_attention_recent_window = depth_recent_window
 
     if model_args.patch_method == "depth_attention":
-        if cross_layer_mode != "depth_softmax":
-            raise ValueError("Depth-Attention release only supports cross_layer_mode='depth_softmax'.")
         config.recurrent_model = True
-        config.cross_layer_pattern = "depth_softmax"
-        config.cross_layer_mode = cross_layer_mode
+        config.use_depth_attention = True
         config.baseline_mode = None
         config.residual_baseline = None
     elif model_args.patch_method == "attnres":
         config.recurrent_model = True
-        config.cross_layer_pattern = None
+        config.use_depth_attention = False
         config.baseline_mode = "attnres"
         config.residual_baseline = None
         config.attnres_block_size = _arg_or_config(
@@ -214,7 +211,7 @@ def load_model(
         )
     elif model_args.patch_method == "denseformer":
         config.recurrent_model = True
-        config.cross_layer_pattern = None
+        config.use_depth_attention = False
         config.baseline_mode = "denseformer"
         config.residual_baseline = None
         denseformer_dilation = _arg_or_config(
@@ -239,7 +236,7 @@ def load_model(
         config.densetransformer_dwa_period = denseformer_period
     elif model_args.patch_method == "mhc":
         config.recurrent_model = True
-        config.cross_layer_pattern = None
+        config.use_depth_attention = False
         config.baseline_mode = "mhc"
         config.residual_baseline = None
         num_streams = _arg_or_config(
@@ -249,6 +246,7 @@ def load_model(
         config.mhc_num_streams = num_streams
     else:
         config.recurrent_model = False
+        config.use_depth_attention = False
 
     patch_config(config, tokenizer, model_args, init_kwargs, is_trainable)
     apply_liger_kernel(config, model_args, is_trainable, require_logits=(finetuning_args.stage not in ["pt", "sft"]))

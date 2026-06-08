@@ -48,7 +48,6 @@ bash scripts/train_mhc_llama_410m.sh
 Depth-Attention overrides:
 
 ```bash
-export CROSS_LAYER_MODE=depth_softmax
 export STRIDE=4
 export RECENT_WINDOW=0
 ```

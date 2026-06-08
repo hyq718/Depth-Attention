@@ -36,7 +36,6 @@ llamafactory-cli train \
     --disable_gradient_checkpointing true \
     --preprocessing_num_workers 1 \
     --patch_method depth_attention \
-    --cross_layer_mode depth_softmax \
     --depth_attention_stride 2 \
     --depth_attention_recent_window 0 \
     --output_dir "$OUTPUT_DIR"

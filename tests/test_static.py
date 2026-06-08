@@ -18,9 +18,8 @@ def test_all_json_files_are_valid():
 def test_public_configs_use_reference_fields():
     depth_cfg = json.loads((ROOT / "llama_config" / "depth_attention_410m" / "config.json").read_text())
     assert depth_cfg["recurrent_model"] is True
-    assert depth_cfg["cross_layer_pattern"] == "depth_softmax"
-    assert depth_cfg["cross_layer_mode"] == "depth_softmax"
-    assert depth_cfg["depth_softmax_stride"] == depth_cfg["num_hidden_layers"] // 2
+    assert depth_cfg["use_depth_attention"] is True
+    assert depth_cfg["depth_attention_stride"] == depth_cfg["num_hidden_layers"] // 2
     assert depth_cfg["num_attention_heads"] // depth_cfg["num_key_value_heads"] == 4
 
     expected_baselines = {
@@ -91,9 +90,12 @@ def test_patch_method_strings_are_depth_attention_specific():
     assert "ponderlm" not in patch_file.lower()
 
 
-def test_depth_attention_release_exposes_only_depth_softmax_mode():
+def test_depth_attention_release_exposes_single_public_mode():
     forbidden_modes = [
-        "depth_softmax_" + "1head",
+        "depth_" + "softmax",
+        "cross_layer_pattern",
+        "cross_layer_mode",
+        "depth_" + "softmax_" + "1head",
         "cross_attn_" + "lse",
         '"' + "g" + "ate" + '"',
     ]
@@ -103,7 +105,6 @@ def test_depth_attention_release_exposes_only_depth_softmax_mode():
         ROOT / "src" / "llamafactory" / "hparams" / "model_args.py",
         ROOT / "src" / "llamafactory" / "model" / "loader.py",
     ]
-    paths.extend((ROOT / "src" / "llamafactory" / "model" / "modeling").glob("modeling_llama_*.py"))
     for path in paths:
         text = path.read_text(encoding="utf-8")
         for mode in forbidden_modes:

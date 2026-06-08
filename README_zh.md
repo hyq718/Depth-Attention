@@ -1,7 +1,9 @@
 # Depth-Attention
 
+[论文](https://arxiv.org/abs/2606.05014) / [PDF](https://arxiv.org/pdf/2606.05014)
+
 Depth-Attention 是一个 LLaMA-Factory 风格的预训练仓库，用于训练
-Depth-Attention / depth-softmax LLaMA 以及 AttnRes、DenseFormer、mHC
+Depth-Attention LLaMA 以及 AttnRes、DenseFormer、mHC
 三个对比 baseline。
 
 ## 快速开始
@@ -32,10 +34,9 @@ Depth-Attention 使用参考实现字段：
 ```json
 {
   "recurrent_model": true,
-  "cross_layer_pattern": "depth_softmax",
-  "cross_layer_mode": "depth_softmax",
-  "depth_softmax_stride": 16,
-  "depth_recent_window": 0
+  "use_depth_attention": true,
+  "depth_attention_stride": 16,
+  "depth_attention_recent_window": 0
 }
 ```
 

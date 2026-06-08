@@ -2,6 +2,7 @@
 ### Cross-Layer Value Mixing for Language Models
 
 [![Paper](https://img.shields.io/badge/arXiv-2606.05014-b31b1b.svg)](https://arxiv.org/abs/2606.05014)
+[![PDF](https://img.shields.io/badge/Paper-PDF-b31b1b.svg)](https://arxiv.org/pdf/2606.05014)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 [![LLaMA-Factory](https://img.shields.io/badge/Built%20on-LLaMA--Factory-2563eb.svg)](https://github.com/hiyouga/LLaMA-Factory)
 
@@ -41,7 +42,7 @@ All methods share the same CLI and switch with one flag:
 
 | `--patch_method` | Method | Modeling file |
 |---|---|---|
-| `depth_attention` | **Depth-Attention / depth-softmax** | `modeling_llama_depth_attention.py` |
+| `depth_attention` | **Depth-Attention** | `modeling_llama_depth_attention.py` |
 | `attnres` | Block AttnRes baseline | `modeling_llama_attnres.py` |
 | `denseformer` | DenseFormer / DenseTransformer baseline | `modeling_llama_denseformer.py` |
 | `mhc` | Multi-stream residual connector baseline | `modeling_llama_mhc.py` |
@@ -147,7 +148,6 @@ llamafactory-cli train \
     --bf16 false --fp16 false --flash_attn disabled \
     --disable_gradient_checkpointing true \
     --patch_method depth_attention \
-    --cross_layer_mode depth_softmax \
     --depth_attention_stride 2 \
     --depth_attention_recent_window 0 \
     --output_dir saves/smoke/depth_attention_tiny
@@ -215,10 +215,9 @@ For Depth-Attention, the key config fields are:
 ```json
 {
   "recurrent_model": true,
-  "cross_layer_pattern": "depth_softmax",
-  "cross_layer_mode": "depth_softmax",
-  "depth_softmax_stride": 16,
-  "depth_recent_window": 0,
+  "use_depth_attention": true,
+  "depth_attention_stride": 16,
+  "depth_attention_recent_window": 0,
   "use_qk_norm": true
 }
 ```
@@ -241,7 +240,6 @@ This exercises the native-KV GQA path used by the reference implementation.
 | Flag | Default | Method | Meaning |
 |---|---:|---|---|
 | `--patch_method` | unset | all | Which Llama implementation to swap in. |
-| `--cross_layer_mode` | config / `depth_softmax` | Depth-Attention | Depth scoring/mixing mode. This release supports `depth_softmax`. |
 | `--depth_attention_stride` | config / half the layer count | Depth-Attention | Select every Nth previous layer for depth mixing. |
 | `--depth_attention_recent_window` | config / `0` | Depth-Attention | Always include this many most-recent previous layers. |
 | `--use_qk_norm` | config | Depth-Attention / baselines | Override q/k head RMSNorm. |

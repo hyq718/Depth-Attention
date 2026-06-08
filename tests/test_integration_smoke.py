@@ -52,10 +52,9 @@ def config_for(method: str):
     if method == "depth_attention":
         data.update(
             recurrent_model=True,
-            cross_layer_pattern="depth_softmax",
-            cross_layer_mode="depth_softmax",
-            depth_softmax_stride=1,
-            depth_recent_window=0,
+            use_depth_attention=True,
+            depth_attention_stride=1,
+            depth_attention_recent_window=0,
         )
     elif method == "attnres":
         data.update(recurrent_model=True, baseline_mode="attnres", attnres_block_size=4)

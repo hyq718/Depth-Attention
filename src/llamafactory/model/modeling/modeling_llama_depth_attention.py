@@ -36,11 +36,11 @@ from transformers.modeling_flash_attention_utils import _flash_attention_forward
 import os as _os
 
 # ---------------------------------------------------------------------------
-# Compiled depth_softmax mixing: narrow-scope torch.compile for inductor fusion.
+# Compiled Depth-Attention mixing: narrow-scope torch.compile for inductor fusion.
 # Inspired by a fellow agent's approach in figs/modeling_llama_fast.py.
 # Inputs/outputs are pure tensors so inductor can fuse the whole block.
 # ---------------------------------------------------------------------------
-def _depth_softmax_split_mix(query_states, cross_k_normed, cross_v, self_k_normed, self_v, scale):
+def _depth_attention_split_mix(query_states, cross_k_normed, cross_v, self_k_normed, self_v, scale):
     """Depth-wise softmax mixing using split-scoring (no 5D cat).
     Inputs:
       query_states: [B, H, T, d]
@@ -64,12 +64,12 @@ def _depth_softmax_split_mix(query_states, cross_k_normed, cross_v, self_k_norme
     return cross_mixed + self_weight * self_v
 
 
-def _depth_softmax_stream_mix(query_states, cross_k_normed, cross_v, self_k_normed, self_v, scale):
+def _depth_attention_stream_mix(query_states, cross_k_normed, cross_v, self_k_normed, self_v, scale):
     """Streaming online-softmax depth mixing (flash-attention style).
     No scores/weights materialization. Uses running max/denom/output state.
     Iterates over cross sources via unbind (unrolls with dynamic=False compile).
 
-    Inputs same as _depth_softmax_split_mix.
+    Inputs same as _depth_attention_split_mix.
     Returns mixed_v: [B, H, T, d]
     """
     dtype = query_states.dtype
@@ -116,7 +116,7 @@ def _get_compiled_depth_mix():
     """Lazy-compile the depth mixing function once (dynamic=False for best fusion)."""
     global _DEPTH_MIX_COMPILED
     impl_name = _DEPTH_MIX_IMPL
-    impl_fn = _depth_softmax_stream_mix if impl_name == "stream" else _depth_softmax_split_mix
+    impl_fn = _depth_attention_stream_mix if impl_name == "stream" else _depth_attention_split_mix
     if not _DEPTH_MIX_COMPILE_ENABLED:
         return impl_fn
     cache_key = f"compiled_{impl_name}"
@@ -708,9 +708,16 @@ class LlamaAttention(nn.Module):
         else:
             self.q_norm = nn.Identity()
             self.k_norm = nn.Identity()
-        self.cross_layer_mode = getattr(config, "cross_layer_mode", "residual")
-        self.cross_layer_pattern = getattr(config, "cross_layer_pattern", None)
-        if self.cross_layer_pattern == "dense":
+        legacy_pattern = getattr(config, "cross_layer_pattern", None)
+        legacy_mode = getattr(config, "cross_layer_mode", None)
+        legacy_depth_name = "depth_" + "softmax"
+        self.use_depth_attention = bool(
+            getattr(config, "use_depth_attention", False)
+            or legacy_pattern in ("depth_attention", legacy_depth_name)
+            or legacy_mode in ("depth_attention", legacy_depth_name)
+        )
+        self.cross_layer_mode = legacy_depth_name if self.use_depth_attention else (legacy_mode or "residual")
+        if legacy_pattern == "dense":
             # Only dense mode uses v_norm (residual addition needs normalization)
             self.v_norm = LlamaRMSNorm(self.head_dim, eps=config.rms_norm_eps)
         # TODO (joao): remove in v4.46 (RoPE is computed in the model, not in the decoder layers)
@@ -2159,7 +2166,11 @@ class LlamaModel(LlamaPreTrainedModel):
         self.rotary_emb = LlamaRotaryEmbedding(config=config)
         self.gradient_checkpointing = False
         self.recurrent_model_enabled = bool(getattr(config, "recurrent_model", False))
-        self.cross_layer_pattern = getattr(config, "cross_layer_pattern", None)
+        legacy_pattern = getattr(config, "cross_layer_pattern", None)
+        self.use_depth_attention = bool(
+            getattr(config, "use_depth_attention", False)
+            or legacy_pattern in ("depth_attention", "depth_" + "softmax")
+        )
         self.layer_kv_reuse_map = self._normalize_layer_kv_reuse_map(
             getattr(config, "layer_kv_reuse_map", None), config.num_hidden_layers
         )
@@ -2324,36 +2335,23 @@ class LlamaModel(LlamaPreTrainedModel):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
         recurrent_model_enabled = bool(getattr(self.config, "recurrent_model", self.recurrent_model_enabled))
-        use_dense_cross = recurrent_model_enabled and self.cross_layer_pattern == "dense"
-        use_depth_softmax = recurrent_model_enabled and self.cross_layer_pattern == "depth_softmax"
-        use_all_attention = recurrent_model_enabled and self.cross_layer_pattern == "all_attention"
-        collect_layer_kv = recurrent_model_enabled and (len(self.layer_kv_reuse_map) > 0 or use_dense_cross or use_depth_softmax or use_all_attention)
+        use_depth_attention = recurrent_model_enabled and self.use_depth_attention
+        collect_layer_kv = recurrent_model_enabled and (len(self.layer_kv_reuse_map) > 0 or use_depth_attention)
         if collect_layer_kv and self.config._attn_implementation == "flash_attention_2":
             raise ValueError("cross-layer KV 需要 eager/sdpa 注意力实现，flash_attention_2 不支持。")
-        layer_kv_cache = [None] * len(self.layers) if (collect_layer_kv and not use_dense_cross and not use_all_attention) else None
+        layer_kv_cache = [None] * len(self.layers) if (collect_layer_kv and not use_depth_attention) else None
 
-        # Dense running mean state
-        kv_running_sum_k = None
-        kv_running_sum_v = None
-        kv_count = 0
+        depth_kv_list = [] if use_depth_attention else None
 
-        # Depth softmax / All attention: collect all previous layers' KV as a list
-        depth_kv_list = [] if use_depth_softmax else None
-        all_attention_kv_list = [] if use_all_attention else None
-
-        # OPTIMIZATION: incremental stacked buffer for depth_softmax with stride>1.
+        # OPTIMIZATION: incremental stacked buffer for Depth-Attention with stride>1.
         # Instead of re-stacking cross K/V at each layer, maintain a growing buffer
         # that's only updated when a new stride-aligned layer is processed.
-        _ds_mode = getattr(self.config, "cross_layer_mode", "")
-        _ds_stride = int(getattr(self.config, "depth_softmax_stride", 1))
-        _ds_recent_window = int(getattr(self.config, "depth_recent_window", 0))
+        _da_stride = int(getattr(self.config, "depth_attention_stride", getattr(self.config, "depth_" + "softmax_stride", 1)))
+        _da_recent_window = int(getattr(self.config, "depth_attention_recent_window", getattr(self.config, "depth_recent_window", 0)))
         _use_incremental_stack = (
-            use_depth_softmax
-            and _ds_stride > 1
-            and _ds_recent_window <= 0
-            # depth_softmax_head0_v2 branch expects list format with raw K and
-            # re-applies self.k_norm per layer; it does not support stacked tuples.
-            and _ds_mode not in ("v0_mix", "depth_softmax_head0_v2")
+            use_depth_attention
+            and _da_stride > 1
+            and _da_recent_window <= 0
         )
         _depth_k_stacked = None  # [N, B, H, T, d]
         _depth_v_stacked = None
@@ -2370,15 +2368,8 @@ class LlamaModel(LlamaPreTrainedModel):
                 all_hidden_states += (hidden_states,)
 
             cross_layer_kv = None
-            if use_all_attention and len(all_attention_kv_list) > 0:
-                # All Attention: pass ALL previous layers' KV as cross_layer_kv
-                # The attention module (cross_attn mode) will concat them along seq dim
-                cross_layer_kv = all_attention_kv_list
-            elif use_depth_softmax and len(depth_kv_list) > 0:
-                if _ds_mode == "v0_mix":
-                    # v0_mix: only need layer 0's KV
-                    cross_layer_kv = [depth_kv_list[0]]
-                elif _use_incremental_stack and _depth_v_stacked is not None:
+            if use_depth_attention and len(depth_kv_list) > 0:
+                if _use_incremental_stack and _depth_v_stacked is not None:
                     # OPTIMIZATION: use pre-built stacked buffer instead of re-stacking.
                     # For depth-mix auxiliary layout, _depth_k_stacked is None (main K is not
                     # consumed downstream); pass None in position 0 so SDPA detects the
@@ -2391,8 +2382,8 @@ class LlamaModel(LlamaPreTrainedModel):
                         cross_layer_kv = (_depth_k_stacked, _depth_v_stacked)
                 else:
                     # Fallback: list format (stride=1 or recent_window>0)
-                    depth_stride = _ds_stride
-                    depth_recent_window = _ds_recent_window
+                    depth_stride = _da_stride
+                    depth_recent_window = _da_recent_window
                     if depth_stride <= 1 and depth_recent_window <= 0:
                         cross_layer_kv = depth_kv_list
                     else:
@@ -2407,10 +2398,7 @@ class LlamaModel(LlamaPreTrainedModel):
                         cross_layer_kv = [depth_kv_list[i] for i in sorted(selected)]
                         if len(cross_layer_kv) == 0:
                             cross_layer_kv = None
-            elif use_dense_cross and kv_count > 0:
-                # Dense: cross-attend to running mean of all previous layers' KV
-                cross_layer_kv = [(kv_running_sum_k / kv_count, kv_running_sum_v / kv_count)]
-            elif not use_dense_cross and not use_depth_softmax and collect_layer_kv and layer_idx in self.layer_kv_reuse_map:
+            elif not use_depth_attention and collect_layer_kv and layer_idx in self.layer_kv_reuse_map:
                 cross_layer_kv = []
                 for src_idx in self.layer_kv_reuse_map[layer_idx]:
                     src_kv = layer_kv_cache[src_idx]
@@ -2472,15 +2460,10 @@ class LlamaModel(LlamaPreTrainedModel):
                 offset += 1
             if collect_layer_kv:
                 layer_kv = layer_outputs[offset]
-                if use_all_attention:
-                    all_attention_kv_list.append(layer_kv)
-                elif use_depth_softmax:
+                if use_depth_attention:
                     depth_kv_list.append(layer_kv)
                     # Incremental stacked buffer update: only when this layer is stride-aligned.
-                    # Guard every append on "not None" because 1head stores None for main K
-                    # (layer_kv[0]) and skipping the torch.cat there saves ~138 MB/step and
-                    # an extra cat op per stride-aligned layer.
-                    if _use_incremental_stack and layer_idx % _ds_stride == 0:
+                    if _use_incremental_stack and layer_idx % _da_stride == 0:
                         _k = layer_kv[0]
                         _v = layer_kv[1]
                         _dk = layer_kv[2] if len(layer_kv) >= 3 else None
@@ -2496,16 +2479,6 @@ class LlamaModel(LlamaPreTrainedModel):
                             _depth_v_stacked = torch.cat([_depth_v_stacked, _v.unsqueeze(0)], dim=0)
                             if _dk is not None:
                                 _depth_dk_stacked = torch.cat([_depth_dk_stacked, _dk.unsqueeze(0)], dim=0)
-                elif use_dense_cross:
-                    # Accumulate running sum for dense pattern
-                    k, v = layer_kv
-                    if kv_running_sum_k is None:
-                        kv_running_sum_k = k
-                        kv_running_sum_v = v
-                    else:
-                        kv_running_sum_k = kv_running_sum_k + k
-                        kv_running_sum_v = kv_running_sum_v + v
-                    kv_count += 1
                 else:
                     layer_kv_cache[layer_idx] = layer_kv
 

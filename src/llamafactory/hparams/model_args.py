@@ -203,14 +203,6 @@ class ModelArguments(QuantizationArguments, ProcessorArguments, ExportArguments,
         default=None,
         metadata={"help": "Override the config's q/k head RMSNorm setting. Leave unset to use the config."},
     )
-    cross_layer_mode: Optional[str] = field(
-        default=None,
-        metadata={
-            "help": (
-                "Depth-Attention scoring mode. This release supports `depth_softmax`; leave unset to use the config."
-            )
-        },
-    )
     depth_attention_stride: Optional[int] = field(
         default=None,
         metadata={

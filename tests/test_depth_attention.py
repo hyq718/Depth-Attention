@@ -29,7 +29,7 @@ def tiny_config(**overrides):
     return config
 
 
-def test_depth_softmax_split_mix_matches_reference_formula():
+def test_depth_attention_split_mix_matches_reference_formula():
     torch.manual_seed(0)
     query = torch.randn(2, 3, 4, 5)
     cross_key = torch.randn(2, 2, 3, 4, 5)
@@ -38,7 +38,7 @@ def test_depth_softmax_split_mix_matches_reference_formula():
     self_value = torch.randn(2, 3, 4, 5)
     scale = math.sqrt(query.shape[-1])
 
-    actual = modeling_llama_depth_attention._depth_softmax_split_mix(
+    actual = modeling_llama_depth_attention._depth_attention_split_mix(
         query, cross_key, cross_value, self_key, self_value, scale
     )
 

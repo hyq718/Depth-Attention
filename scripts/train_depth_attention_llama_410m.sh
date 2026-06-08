@@ -11,7 +11,6 @@ TOKENIZER=${TOKENIZER:-data/tiny_tokenizer}
 TOKENIZED=${TOKENIZED:-data/tokenized_data/smallpile}
 STRIDE=${STRIDE:-16}
 RECENT_WINDOW=${RECENT_WINDOW:-0}
-CROSS_LAYER_MODE=${CROSS_LAYER_MODE:-depth_softmax}
 
 python -m llamafactory.launcher \
     --model_name_or_path "$MODEL_CFG" \
@@ -49,7 +48,6 @@ python -m llamafactory.launcher \
     --deepspeed examples/deepspeed/ds_z0_config.json \
     --report_to wandb \
     --patch_method depth_attention \
-    --cross_layer_mode "$CROSS_LAYER_MODE" \
     --depth_attention_stride "$STRIDE" \
     --depth_attention_recent_window "$RECENT_WINDOW" \
     --output_dir "$OUTPUT_DIR"
