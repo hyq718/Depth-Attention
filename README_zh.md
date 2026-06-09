@@ -53,10 +53,10 @@ CLI 兼容别名：
 
 | 规模 | 方法 | Hugging Face | 模型配置 | 训练 recipe |
 |---|---|---|---|---|
-| 3B | Depth-Attention | [zeng123/3b-ds-s24-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-ds-s24-qknorm-gqa-4x) | `llama_config/released/3b_depth_attention_qknorm_gqa4x` | `examples/released_models/train_3b_depth_attention_qknorm_gqa4x.yaml` |
-| 3B | AttnRes | [zeng123/3b-attnres-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-attnres-qknorm-gqa-4x) | `llama_config/released/3b_attnres_qknorm_gqa4x` | `examples/released_models/train_3b_attnres_qknorm_gqa4x.yaml` |
-| 3B | DenseFormer | [zeng123/3b-denseformer-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-denseformer-qknorm-gqa-4x) | `llama_config/released/3b_denseformer_qknorm_gqa4x` | `examples/released_models/train_3b_denseformer_qknorm_gqa4x.yaml` |
-| 3B | mHC | [zeng123/3b-mhc-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-mhc-qknorm-gqa-4x) | `llama_config/released/3b_mhc_qknorm_gqa4x` | `examples/released_models/train_3b_mhc_qknorm_gqa4x.yaml` |
+| 3B | Depth-Attention | <https://huggingface.co/zeng123/Depth-attention-3B> | `llama_config/released/3b_depth_attention_qknorm_gqa4x` | `examples/released_models/train_3b_depth_attention_qknorm_gqa4x.yaml` |
+| 3B | AttnRes | <https://huggingface.co/zeng123/AttnRes-3B> | `llama_config/released/3b_attnres_qknorm_gqa4x` | `examples/released_models/train_3b_attnres_qknorm_gqa4x.yaml` |
+| 3B | DenseFormer | <https://huggingface.co/zeng123/DenseFormer-3B> | `llama_config/released/3b_denseformer_qknorm_gqa4x` | `examples/released_models/train_3b_denseformer_qknorm_gqa4x.yaml` |
+| 3B | mHC | <https://huggingface.co/zeng123/mHC-3B> | `llama_config/released/3b_mhc_qknorm_gqa4x` | `examples/released_models/train_3b_mhc_qknorm_gqa4x.yaml` |
 
 四个 checkpoint 都是 3B，使用 48 层、hidden size 2048、32 个 attention
 heads、8 个 KV heads、QK norm 和 GQA4x。其中 Depth-Attention checkpoint

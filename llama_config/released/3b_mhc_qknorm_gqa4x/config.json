@@ -1,5 +1,5 @@
 {
-  "_name_or_path": "3b-mhc-qknorm-gqa-4x",
+  "_name_or_path": "zeng123/mHC-3B",
   "architectures": [
     "LlamaForCausalLM"
   ],

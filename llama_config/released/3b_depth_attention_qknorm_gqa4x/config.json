@@ -1,5 +1,5 @@
 {
-  "_name_or_path": "3b-ds-s24-qknorm-gqa-4x",
+  "_name_or_path": "zeng123/Depth-attention-3B",
   "architectures": [
     "LlamaForCausalLM"
   ],

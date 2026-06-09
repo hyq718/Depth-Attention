@@ -34,13 +34,14 @@ def test_public_configs_use_reference_fields():
         assert data["num_attention_heads"] // data["num_key_value_heads"] == 4
 
     expected_released = {
-        "3b_depth_attention_qknorm_gqa4x": (None, 2048),
-        "3b_attnres_qknorm_gqa4x": ("attnres", 2048),
-        "3b_denseformer_qknorm_gqa4x": ("denseformer", 2048),
-        "3b_mhc_qknorm_gqa4x": ("mhc", 2048),
+        "3b_depth_attention_qknorm_gqa4x": (None, 2048, "zeng123/Depth-attention-3B"),
+        "3b_attnres_qknorm_gqa4x": ("attnres", 2048, "zeng123/AttnRes-3B"),
+        "3b_denseformer_qknorm_gqa4x": ("denseformer", 2048, "zeng123/DenseFormer-3B"),
+        "3b_mhc_qknorm_gqa4x": ("mhc", 2048, "zeng123/mHC-3B"),
     }
-    for dirname, (baseline_mode, hidden_size) in expected_released.items():
+    for dirname, (baseline_mode, hidden_size, model_id) in expected_released.items():
         data = json.loads((ROOT / "llama_config" / "released" / dirname / "config.json").read_text())
+        assert data["_name_or_path"] == model_id
         if baseline_mode is None:
             assert data["use_depth_attention"] is True
             assert data["depth_attention_stride"] == data["num_hidden_layers"] // 2

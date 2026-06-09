@@ -83,10 +83,10 @@ The following trained checkpoints are released under
 
 | Size | Method | Checkpoint | Model config | Training recipe |
 |---|---|---|---|---|
-| 3B | Depth-Attention | [zeng123/3b-ds-s24-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-ds-s24-qknorm-gqa-4x) | `llama_config/released/3b_depth_attention_qknorm_gqa4x` | `examples/released_models/train_3b_depth_attention_qknorm_gqa4x.yaml` |
-| 3B | AttnRes | [zeng123/3b-attnres-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-attnres-qknorm-gqa-4x) | `llama_config/released/3b_attnres_qknorm_gqa4x` | `examples/released_models/train_3b_attnres_qknorm_gqa4x.yaml` |
-| 3B | DenseFormer | [zeng123/3b-denseformer-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-denseformer-qknorm-gqa-4x) | `llama_config/released/3b_denseformer_qknorm_gqa4x` | `examples/released_models/train_3b_denseformer_qknorm_gqa4x.yaml` |
-| 3B | mHC | [zeng123/3b-mhc-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-mhc-qknorm-gqa-4x) | `llama_config/released/3b_mhc_qknorm_gqa4x` | `examples/released_models/train_3b_mhc_qknorm_gqa4x.yaml` |
+| 3B | Depth-Attention | <https://huggingface.co/zeng123/Depth-attention-3B> | `llama_config/released/3b_depth_attention_qknorm_gqa4x` | `examples/released_models/train_3b_depth_attention_qknorm_gqa4x.yaml` |
+| 3B | AttnRes | <https://huggingface.co/zeng123/AttnRes-3B> | `llama_config/released/3b_attnres_qknorm_gqa4x` | `examples/released_models/train_3b_attnres_qknorm_gqa4x.yaml` |
+| 3B | DenseFormer | <https://huggingface.co/zeng123/DenseFormer-3B> | `llama_config/released/3b_denseformer_qknorm_gqa4x` | `examples/released_models/train_3b_denseformer_qknorm_gqa4x.yaml` |
+| 3B | mHC | <https://huggingface.co/zeng123/mHC-3B> | `llama_config/released/3b_mhc_qknorm_gqa4x` | `examples/released_models/train_3b_mhc_qknorm_gqa4x.yaml` |
 
 All four released configs use 48 layers, hidden size 2048, 32 attention
 heads, and 8 KV heads. They use QK norm and GQA4x. The released
@@ -289,13 +289,13 @@ patch_llama_denseformer()
 from transformers import AutoModelForCausalLM
 
 model = AutoModelForCausalLM.from_pretrained(
-    "zeng123/3b-denseformer-qknorm-gqa-4x",
+    "zeng123/DenseFormer-3B",
     trust_remote_code=True,
 )
 ```
 
 For mHC checkpoints, use `patch_llama_mhc()` and the corresponding
-`zeng123/*-mhc-qknorm-gqa-4x` checkpoint.
+`zeng123/mHC-3B` checkpoint.
 
 ---
 

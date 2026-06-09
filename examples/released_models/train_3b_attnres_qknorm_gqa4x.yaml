@@ -1,4 +1,4 @@
-# Reproduction recipe for zeng123/3b-attnres-qknorm-gqa-4x.
+# Reproduction recipe for zeng123/AttnRes-3B.
 # The exported model card records 32 devices, per-device batch 2,
 # gradient accumulation 16, and total train batch size 1024.
 model_name_or_path: llama_config/released/3b_attnres_qknorm_gqa4x

@@ -1,4 +1,4 @@
-# Reproduction recipe for zeng123/3b-mhc-qknorm-gqa-4x.
+# Reproduction recipe for zeng123/mHC-3B.
 # The exported model card records 32 devices, per-device batch 4,
 # gradient accumulation 8, and total train batch size 1024.
 model_name_or_path: llama_config/released/3b_mhc_qknorm_gqa4x
