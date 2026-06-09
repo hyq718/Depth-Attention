@@ -61,7 +61,7 @@ comparison paths.
 Depth-Attention/
 ├── scripts/                         # quickstart + one launcher per method
 ├── llama_config/                    # tiny and 410M-class GQA4x configs
-├── llama_config/released/           # 1.5B / 3B released checkpoint configs
+├── llama_config/released/           # 3B released checkpoint configs
 ├── examples/deepspeed/              # ZeRO configs
 ├── examples/released_models/        # training recipes for released models
 ├── data/dataset_info.json           # smoke_text, minipile, smallpile, testpile
@@ -83,21 +83,23 @@ The following trained checkpoints are released under
 
 | Size | Method | Checkpoint | Model config | Training recipe |
 |---|---|---|---|---|
-| 1.5B | DenseFormer | [zeng123/1.5b-denseformer-qknorm-gqa-4x](https://huggingface.co/zeng123/1.5b-denseformer-qknorm-gqa-4x) | `llama_config/released/1.5b_denseformer_qknorm_gqa4x` | `examples/released_models/train_1.5b_denseformer_qknorm_gqa4x.yaml` |
-| 1.5B | mHC | [zeng123/1.5b-mhc-qknorm-gqa-4x](https://huggingface.co/zeng123/1.5b-mhc-qknorm-gqa-4x) | `llama_config/released/1.5b_mhc_qknorm_gqa4x` | `examples/released_models/train_1.5b_mhc_qknorm_gqa4x.yaml` |
+| 3B | Depth-Attention | [zeng123/3b-ds-s24-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-ds-s24-qknorm-gqa-4x) | `llama_config/released/3b_depth_attention_qknorm_gqa4x` | `examples/released_models/train_3b_depth_attention_qknorm_gqa4x.yaml` |
+| 3B | AttnRes | [zeng123/3b-attnres-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-attnres-qknorm-gqa-4x) | `llama_config/released/3b_attnres_qknorm_gqa4x` | `examples/released_models/train_3b_attnres_qknorm_gqa4x.yaml` |
 | 3B | DenseFormer | [zeng123/3b-denseformer-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-denseformer-qknorm-gqa-4x) | `llama_config/released/3b_denseformer_qknorm_gqa4x` | `examples/released_models/train_3b_denseformer_qknorm_gqa4x.yaml` |
 | 3B | mHC | [zeng123/3b-mhc-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-mhc-qknorm-gqa-4x) | `llama_config/released/3b_mhc_qknorm_gqa4x` | `examples/released_models/train_3b_mhc_qknorm_gqa4x.yaml` |
 
-The 1.5B configs use 48 layers, hidden size 1536, 24 attention heads, and
-6 KV heads. The 3B configs use 48 layers, hidden size 2048, 32 attention
-heads, and 8 KV heads. All four checkpoints use QK norm and GQA4x.
+All four released configs use 48 layers, hidden size 2048, 32 attention
+heads, and 8 KV heads. They use QK norm and GQA4x. The released
+Depth-Attention checkpoint uses stride 24.
 
 The released training recipes are assembled from each checkpoint's exported
 `config.json` and Trainer-generated model card. They record the public
-smallpile recipe: 32 devices, per-device batch size 4, gradient accumulation
-8, global batch size 1024, AdamW with betas `(0.9, 0.95)`, cosine-with-min-lr
-scheduling, warmup ratio 0.02, and 1 epoch. Use `HF_ENDPOINT=https://hf-mirror.com`
-when downloading from networks that require the Hugging Face mirror.
+smallpile recipe: 32 devices, global batch size 1024, AdamW with betas
+`(0.9, 0.95)`, cosine-with-min-lr scheduling, warmup ratio 0.02, and 1 epoch.
+Depth-Attention, DenseFormer, and mHC use per-device batch size 4 with
+gradient accumulation 8; AttnRes uses per-device batch size 2 with gradient
+accumulation 16. Use `HF_ENDPOINT=https://hf-mirror.com` when downloading from
+networks that require the Hugging Face mirror.
 
 ---
 

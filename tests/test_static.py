@@ -34,14 +34,18 @@ def test_public_configs_use_reference_fields():
         assert data["num_attention_heads"] // data["num_key_value_heads"] == 4
 
     expected_released = {
-        "1.5b_denseformer_qknorm_gqa4x": ("denseformer", 1536),
-        "1.5b_mhc_qknorm_gqa4x": ("mhc", 1536),
+        "3b_depth_attention_qknorm_gqa4x": (None, 2048),
+        "3b_attnres_qknorm_gqa4x": ("attnres", 2048),
         "3b_denseformer_qknorm_gqa4x": ("denseformer", 2048),
         "3b_mhc_qknorm_gqa4x": ("mhc", 2048),
     }
     for dirname, (baseline_mode, hidden_size) in expected_released.items():
         data = json.loads((ROOT / "llama_config" / "released" / dirname / "config.json").read_text())
-        assert data["baseline_mode"] == baseline_mode
+        if baseline_mode is None:
+            assert data["use_depth_attention"] is True
+            assert data["depth_attention_stride"] == data["num_hidden_layers"] // 2
+        else:
+            assert data["baseline_mode"] == baseline_mode
         assert data["hidden_size"] == hidden_size
         assert data["num_hidden_layers"] == 48
         assert data["num_attention_heads"] // data["num_key_value_heads"] == 4

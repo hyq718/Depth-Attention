@@ -53,16 +53,15 @@ CLI 兼容别名：
 
 | 规模 | 方法 | Hugging Face | 模型配置 | 训练 recipe |
 |---|---|---|---|---|
-| 1.5B | DenseFormer | [zeng123/1.5b-denseformer-qknorm-gqa-4x](https://huggingface.co/zeng123/1.5b-denseformer-qknorm-gqa-4x) | `llama_config/released/1.5b_denseformer_qknorm_gqa4x` | `examples/released_models/train_1.5b_denseformer_qknorm_gqa4x.yaml` |
-| 1.5B | mHC | [zeng123/1.5b-mhc-qknorm-gqa-4x](https://huggingface.co/zeng123/1.5b-mhc-qknorm-gqa-4x) | `llama_config/released/1.5b_mhc_qknorm_gqa4x` | `examples/released_models/train_1.5b_mhc_qknorm_gqa4x.yaml` |
+| 3B | Depth-Attention | [zeng123/3b-ds-s24-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-ds-s24-qknorm-gqa-4x) | `llama_config/released/3b_depth_attention_qknorm_gqa4x` | `examples/released_models/train_3b_depth_attention_qknorm_gqa4x.yaml` |
+| 3B | AttnRes | [zeng123/3b-attnres-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-attnres-qknorm-gqa-4x) | `llama_config/released/3b_attnres_qknorm_gqa4x` | `examples/released_models/train_3b_attnres_qknorm_gqa4x.yaml` |
 | 3B | DenseFormer | [zeng123/3b-denseformer-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-denseformer-qknorm-gqa-4x) | `llama_config/released/3b_denseformer_qknorm_gqa4x` | `examples/released_models/train_3b_denseformer_qknorm_gqa4x.yaml` |
 | 3B | mHC | [zeng123/3b-mhc-qknorm-gqa-4x](https://huggingface.co/zeng123/3b-mhc-qknorm-gqa-4x) | `llama_config/released/3b_mhc_qknorm_gqa4x` | `examples/released_models/train_3b_mhc_qknorm_gqa4x.yaml` |
 
-四个 checkpoint 都使用 QK norm 和 GQA4x。1.5B 配置为 48 层、hidden size
-1536、24 个 attention heads、6 个 KV heads；3B 配置为 48 层、hidden size
-2048、32 个 attention heads、8 个 KV heads。训练 recipe 根据 checkpoint
-导出的 `config.json` 和 Trainer model card 整理；集群下载可设置
-`HF_ENDPOINT=https://hf-mirror.com`。
+四个 checkpoint 都是 3B，使用 48 层、hidden size 2048、32 个 attention
+heads、8 个 KV heads、QK norm 和 GQA4x。其中 Depth-Attention checkpoint
+使用 stride 24。训练 recipe 根据 checkpoint 导出的 `config.json` 和 Trainer
+model card 整理；集群下载可设置 `HF_ENDPOINT=https://hf-mirror.com`。
 
 ## 目录结构
 
@@ -70,7 +69,7 @@ CLI 兼容别名：
 - `src/llamafactory/model/modeling/modeling_llama_attnres.py`：Block AttnRes baseline。
 - `src/llamafactory/model/modeling/modeling_llama_denseformer.py`：DenseFormer baseline。
 - `src/llamafactory/model/modeling/modeling_llama_mhc.py`：mHC baseline。
-- `llama_config/`：tiny、410M-class 和 released 1.5B/3B GQA4x 配置。
+- `llama_config/`：tiny、410M-class 和 released 3B GQA4x 配置。
 - `scripts/`：quickstart 和各方法训练脚本。
 - `examples/deepspeed/`：ZeRO 配置。
 - `examples/released_models/`：released checkpoint 的训练 recipe。
