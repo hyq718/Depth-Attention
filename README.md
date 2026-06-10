@@ -233,19 +233,6 @@ For the released 3B Depth-Attention setting, the key config fields are:
 }
 ```
 
-This is the architecture used by
-`llama_config/released/3b_depth_attention_qknorm_gqa4x/config.json` and
-`zeng123/Depth-attention-3B`. The 3B config uses GQA4x:
-
-```json
-{
-  "num_attention_heads": 32,
-  "num_key_value_heads": 8
-}
-```
-
-This exercises the native-KV GQA path used by the reference implementation.
-
 ---
 
 ## Hyperparameters
@@ -261,7 +248,7 @@ This exercises the native-KV GQA path used by the reference implementation.
 | `--denseformer_dwa_dilation` | config / `1` | DenseFormer | Depth-weighted averaging dilation. |
 | `--denseformer_dwa_period` | config / `1` | DenseFormer | Depth-weighted averaging period. |
 | `--residual_baseline_num_streams` | config / `4` | mHC | Number of residual streams. |
-| `--train_from_scratch` | `False` | all | Random-init from config rather than loading pretrained weights. |
+| `--train_from_scratch` | `True` | all | Random-init from config rather than loading pretrained weights. |
 
 Everything else - optimizer, scheduler, DeepSpeed, FlashAttention, dataset
 flags - is plain LLaMA-Factory. See the scripts for the values used in the
