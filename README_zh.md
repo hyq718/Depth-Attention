@@ -80,11 +80,4 @@ model card 整理；集群下载可设置 `HF_ENDPOINT=https://hf-mirror.com`。
 - `examples/deepspeed/`：ZeRO 配置。
 - `examples/released_models/`：released checkpoint 的训练 recipe。
 
-## 检查
-
-```bash
-python -m compileall -q src tests
-python -m pytest -q
-```
-
 本仓库基于 LLaMA-Factory。

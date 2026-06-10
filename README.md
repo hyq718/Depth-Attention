@@ -296,20 +296,6 @@ For mHC checkpoints, use `patch_llama_mhc()` and the corresponding
 
 ---
 
-## Development checks
-
-```bash
-python -m compileall -q src tests
-python -m pytest -q
-```
-
-The test suite covers the depth-softmax formula, tiny GQA forward/backward,
-save/load, and `AutoModelForCausalLM` patch selection for all four modeling
-files. Torch-dependent tests are skipped automatically when PyTorch is
-unavailable.
-
----
-
 ## Citation
 
 ```bibtex

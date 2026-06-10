@@ -51,10 +51,3 @@ Depth-Attention overrides:
 export STRIDE=4
 export RECENT_WINDOW=0
 ```
-
-## 4. Useful Checks
-
-```bash
-python -m compileall -q src tests
-python -m pytest -q
-```
