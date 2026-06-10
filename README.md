@@ -212,24 +212,35 @@ parameters and compares against vanilla Transformers and strong cross-layer
 baselines. This release focuses on the Llama-Factory training path and the
 reference Llama modeling variants used to reproduce the method-level behavior.
 
-For Depth-Attention, the key config fields are:
+For the released 3B Depth-Attention setting, the key config fields are:
 
 ```json
 {
+  "vocab_size": 50304,
+  "hidden_size": 2048,
+  "intermediate_size": 6912,
+  "num_hidden_layers": 48,
+  "num_attention_heads": 32,
+  "num_key_value_heads": 8,
+  "head_dim": 64,
+  "max_position_embeddings": 2048,
   "recurrent_model": true,
   "use_depth_attention": true,
-  "depth_attention_stride": 16,
+  "depth_attention_stride": 24,
   "depth_attention_recent_window": 0,
-  "use_qk_norm": true
+  "use_qk_norm": true,
+  "torch_dtype": "bfloat16"
 }
 ```
 
-The public 410M config uses GQA4x:
+This is the architecture used by
+`llama_config/released/3b_depth_attention_qknorm_gqa4x/config.json` and
+`zeng123/Depth-attention-3B`. The 3B config uses GQA4x:
 
 ```json
 {
-  "num_attention_heads": 16,
-  "num_key_value_heads": 4
+  "num_attention_heads": 32,
+  "num_key_value_heads": 8
 }
 ```
 

@@ -29,21 +29,28 @@ mhc
 vanilla
 ```
 
-Depth-Attention 使用参考实现字段：
+Depth-Attention 的 3B released 配置使用：
 
 ```json
 {
+  "hidden_size": 2048,
+  "intermediate_size": 6912,
+  "num_hidden_layers": 48,
+  "num_attention_heads": 32,
+  "num_key_value_heads": 8,
   "recurrent_model": true,
   "use_depth_attention": true,
-  "depth_attention_stride": 16,
-  "depth_attention_recent_window": 0
+  "depth_attention_stride": 24,
+  "depth_attention_recent_window": 0,
+  "use_qk_norm": true,
+  "torch_dtype": "bfloat16"
 }
 ```
 
 CLI 兼容别名：
 
 ```bash
---depth_attention_stride 16
+--depth_attention_stride 24
 --depth_attention_recent_window 0
 ```
 
