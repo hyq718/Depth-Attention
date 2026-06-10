@@ -51,17 +51,16 @@ def config_for(method: str):
     )
     if method == "depth_attention":
         data.update(
-            recurrent_model=True,
             use_depth_attention=True,
             depth_attention_stride=1,
             depth_attention_recent_window=0,
         )
     elif method == "attnres":
-        data.update(recurrent_model=True, baseline_mode="attnres", attnres_block_size=4)
+        data.update(baseline_mode="attnres", attnres_block_size=4)
     elif method == "denseformer":
-        data.update(recurrent_model=True, baseline_mode="denseformer")
+        data.update(baseline_mode="denseformer")
     elif method == "mhc":
-        data.update(recurrent_model=True, baseline_mode="mhc", residual_baseline_num_streams=2)
+        data.update(baseline_mode="mhc", residual_baseline_num_streams=2)
     config = LlamaConfig(**data)
     for key in ("rope_theta", "rope_scaling"):
         if key in data and not hasattr(config, key):

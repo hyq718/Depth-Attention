@@ -3175,7 +3175,6 @@ class LlamaModel(LlamaPreTrainedModel):
             config, ("denseformer_dwa_period", "densetransformer_dwa_period"), 1
         )
         self.attnres_block_size = _positive_config_int(config, "attnres_block_size", 12)
-        self.recurrent_model_enabled = bool(getattr(config, "recurrent_model", False))
         self.cross_layer_pattern = getattr(config, "cross_layer_pattern", None)
         self.layer_kv_reuse_map = self._normalize_layer_kv_reuse_map(
             getattr(config, "layer_kv_reuse_map", None), config.num_hidden_layers
@@ -3416,15 +3415,12 @@ class LlamaModel(LlamaPreTrainedModel):
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
-        recurrent_model_enabled = bool(getattr(self.config, "recurrent_model", self.recurrent_model_enabled))
-        if self.residual_baseline is not None:
-            recurrent_model_enabled = False
         if use_attnres_baseline and self.gradient_checkpointing and self.training:
             raise ValueError("Block AttnRes baseline requires --disable_gradient_checkpointing true.")
-        use_dense_cross = recurrent_model_enabled and self.cross_layer_pattern == "dense"
-        use_depth_softmax = recurrent_model_enabled and self.cross_layer_pattern == "depth_softmax"
-        use_all_attention = recurrent_model_enabled and self.cross_layer_pattern == "all_attention"
-        collect_layer_kv = recurrent_model_enabled and (len(self.layer_kv_reuse_map) > 0 or use_dense_cross or use_depth_softmax or use_all_attention)
+        use_dense_cross = False
+        use_depth_softmax = False
+        use_all_attention = False
+        collect_layer_kv = False
         if collect_layer_kv and self.config._attn_implementation == "flash_attention_2":
             raise ValueError("cross-layer KV 需要 eager/sdpa 注意力实现，flash_attention_2 不支持。")
         layer_kv_cache = [None] * len(self.layers) if (collect_layer_kv and not use_dense_cross and not use_all_attention) else None

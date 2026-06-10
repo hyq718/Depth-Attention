@@ -186,15 +186,6 @@ class ModelArguments(QuantizationArguments, ProcessorArguments, ExportArguments,
         default=False,
         metadata={"help": "Whether to output hidden states from each layer of the underlying transformer."},
     )
-    recurrent_model: bool = field(
-        default=False,
-        metadata={
-            "help": (
-                "Enable recurrent cross-layer behavior. Depth-Attention and the residual baselines set this through "
-                "`--patch_method`; vanilla leaves it disabled."
-            )
-        },
-    )
     scale_embeds: bool = field(
         default=False,
         metadata={"help": "Scale token embeddings by sqrt(hidden_size)."},
@@ -328,7 +319,7 @@ class ModelArguments(QuantizationArguments, ProcessorArguments, ExportArguments,
         default=True,
         metadata={
             "help": (
-                "Reserved for compatibility with legacy recurrent-model configs; unused by Depth-Attention."
+                "Reserved for compatibility with legacy configs; unused by Depth-Attention."
             )
         },
     )

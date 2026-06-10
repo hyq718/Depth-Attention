@@ -38,7 +38,6 @@ Depth-Attention 的 3B released 配置使用：
   "num_hidden_layers": 48,
   "num_attention_heads": 32,
   "num_key_value_heads": 8,
-  "recurrent_model": true,
   "use_depth_attention": true,
   "depth_attention_stride": 24,
   "depth_attention_recent_window": 0,

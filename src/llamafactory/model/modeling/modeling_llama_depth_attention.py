@@ -2165,7 +2165,6 @@ class LlamaModel(LlamaPreTrainedModel):
         self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.rotary_emb = LlamaRotaryEmbedding(config=config)
         self.gradient_checkpointing = False
-        self.recurrent_model_enabled = bool(getattr(config, "recurrent_model", False))
         legacy_pattern = getattr(config, "cross_layer_pattern", None)
         self.use_depth_attention = bool(
             getattr(config, "use_depth_attention", False)
@@ -2334,9 +2333,8 @@ class LlamaModel(LlamaPreTrainedModel):
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
-        recurrent_model_enabled = bool(getattr(self.config, "recurrent_model", self.recurrent_model_enabled))
-        use_depth_attention = recurrent_model_enabled and self.use_depth_attention
-        collect_layer_kv = recurrent_model_enabled and (len(self.layer_kv_reuse_map) > 0 or use_depth_attention)
+        use_depth_attention = self.use_depth_attention
+        collect_layer_kv = len(self.layer_kv_reuse_map) > 0 or use_depth_attention
         if collect_layer_kv and self.config._attn_implementation == "flash_attention_2":
             raise ValueError("cross-layer KV 需要 eager/sdpa 注意力实现，flash_attention_2 不支持。")
         layer_kv_cache = [None] * len(self.layers) if (collect_layer_kv and not use_depth_attention) else None

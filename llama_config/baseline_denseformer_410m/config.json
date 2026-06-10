@@ -24,7 +24,6 @@
   "rope_theta": 10000.0,
   "attention_bias": false,
   "attention_dropout": 0.0,
-  "recurrent_model": true,
   "baseline_mode": "denseformer",
   "denseformer_dwa_dilation": 1,
   "denseformer_dwa_period": 1,

@@ -24,7 +24,6 @@
   "rope_theta": 10000.0,
   "attention_bias": false,
   "attention_dropout": 0.0,
-  "recurrent_model": true,
   "use_depth_attention": true,
   "depth_attention_stride": 2,
   "depth_attention_recent_window": 0,

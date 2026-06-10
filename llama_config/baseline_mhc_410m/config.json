@@ -24,7 +24,6 @@
   "rope_theta": 10000.0,
   "attention_bias": false,
   "attention_dropout": 0.0,
-  "recurrent_model": true,
   "baseline_mode": "mhc",
   "residual_baseline_num_streams": 4,
   "mhc_num_streams": 4,

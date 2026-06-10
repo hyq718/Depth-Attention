@@ -224,7 +224,6 @@ For the released 3B Depth-Attention setting, the key config fields are:
   "num_key_value_heads": 8,
   "head_dim": 64,
   "max_position_embeddings": 2048,
-  "recurrent_model": true,
   "use_depth_attention": true,
   "depth_attention_stride": 24,
   "depth_attention_recent_window": 0,

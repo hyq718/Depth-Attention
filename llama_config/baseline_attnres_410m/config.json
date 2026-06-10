@@ -24,7 +24,6 @@
   "rope_theta": 10000.0,
   "attention_bias": false,
   "attention_dropout": 0.0,
-  "recurrent_model": true,
   "baseline_mode": "attnres",
   "attnres_block_size": 12,
   "attnres_recency_bias_init": 3.0,

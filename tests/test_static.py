@@ -17,7 +17,6 @@ def test_all_json_files_are_valid():
 
 def test_public_configs_use_reference_fields():
     depth_cfg = json.loads((ROOT / "llama_config" / "depth_attention_410m" / "config.json").read_text())
-    assert depth_cfg["recurrent_model"] is True
     assert depth_cfg["use_depth_attention"] is True
     assert depth_cfg["depth_attention_stride"] == depth_cfg["num_hidden_layers"] // 2
     assert depth_cfg["num_attention_heads"] // depth_cfg["num_key_value_heads"] == 4
@@ -30,7 +29,6 @@ def test_public_configs_use_reference_fields():
     for dirname, baseline_mode in expected_baselines.items():
         data = json.loads((ROOT / "llama_config" / dirname / "config.json").read_text())
         assert data["baseline_mode"] == baseline_mode
-        assert data["recurrent_model"] is True
         assert data["num_attention_heads"] // data["num_key_value_heads"] == 4
 
     expected_released = {
@@ -117,3 +115,16 @@ def test_depth_attention_release_exposes_single_public_mode():
 
     loader_text = (ROOT / "src" / "llamafactory" / "model" / "loader.py").read_text(encoding="utf-8")
     assert "default_" + "depth_stride" not in loader_text
+
+
+def test_legacy_cross_layer_enable_flag_is_not_public_config():
+    needle = "rec" + "urrent_" + "model"
+    for path in [
+        *list((ROOT / "llama_config").rglob("config.json")),
+        ROOT / "README.md",
+        ROOT / "README_zh.md",
+        ROOT / "src" / "llamafactory" / "hparams" / "model_args.py",
+        ROOT / "src" / "llamafactory" / "model" / "loader.py",
+    ]:
+        text = path.read_text(encoding="utf-8")
+        assert needle not in text, f"{needle} found in {path.relative_to(ROOT)}"

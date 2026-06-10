@@ -194,12 +194,10 @@ def load_model(
     config.depth_attention_recent_window = depth_recent_window
 
     if model_args.patch_method == "depth_attention":
-        config.recurrent_model = True
         config.use_depth_attention = True
         config.baseline_mode = None
         config.residual_baseline = None
     elif model_args.patch_method == "attnres":
-        config.recurrent_model = True
         config.use_depth_attention = False
         config.baseline_mode = "attnres"
         config.residual_baseline = None
@@ -210,7 +208,6 @@ def load_model(
             model_args, config, "attnres_recency_bias_init", "attnres_recency_bias_init", default=3.0
         )
     elif model_args.patch_method == "denseformer":
-        config.recurrent_model = True
         config.use_depth_attention = False
         config.baseline_mode = "denseformer"
         config.residual_baseline = None
@@ -235,7 +232,6 @@ def load_model(
         config.denseformer_dwa_period = denseformer_period
         config.densetransformer_dwa_period = denseformer_period
     elif model_args.patch_method == "mhc":
-        config.recurrent_model = True
         config.use_depth_attention = False
         config.baseline_mode = "mhc"
         config.residual_baseline = None
@@ -245,7 +241,6 @@ def load_model(
         config.residual_baseline_num_streams = num_streams
         config.mhc_num_streams = num_streams
     else:
-        config.recurrent_model = False
         config.use_depth_attention = False
 
     patch_config(config, tokenizer, model_args, init_kwargs, is_trainable)
