@@ -32,6 +32,7 @@ from .llama_patch import (
     patch_llama_denseformer,
     patch_llama_depth_attention,
     patch_llama_mhc,
+    patch_llama_vanilla_qknorm,
 )
 
 
@@ -39,6 +40,7 @@ from .llama_patch import (
 # transformers implementation in place.
 _PATCH_METHODS = {
     "depth_attention": patch_llama_depth_attention,
+    "vanilla_qknorm": patch_llama_vanilla_qknorm,
     "attnres": patch_llama_attnres,
     "denseformer": patch_llama_denseformer,
     "mhc": patch_llama_mhc,
@@ -195,6 +197,11 @@ def load_model(
 
     if model_args.patch_method == "depth_attention":
         config.use_depth_attention = True
+        config.baseline_mode = None
+        config.residual_baseline = None
+    elif model_args.patch_method == "vanilla_qknorm":
+        config.use_depth_attention = False
+        config.use_qk_norm = True
         config.baseline_mode = None
         config.residual_baseline = None
     elif model_args.patch_method == "attnres":

@@ -43,6 +43,7 @@ All methods share the same CLI and switch with one flag:
 | `--patch_method` | Method | Modeling file |
 |---|---|---|
 | `depth_attention` | **Depth-Attention** | `modeling_llama_depth_attention.py` |
+| `vanilla_qknorm` | Parameter-matched Llama + QK-Norm control | `modeling_llama_depth_attention.py` with depth mixing disabled |
 | `attnres` | Block AttnRes baseline | `modeling_llama_attnres.py` |
 | `denseformer` | DenseFormer / DenseTransformer baseline | `modeling_llama_denseformer.py` |
 | `mhc` | Multi-stream residual connector baseline | `modeling_llama_mhc.py` |
@@ -52,6 +53,11 @@ The Llama implementation files are synchronized with the internal reference
 implementations used for the paper, including native GQA support, q/k head
 RMSNorm, Hugging Face cache classes, and the AttnRes / DenseFormer / mHC
 comparison paths.
+
+For a controlled vanilla/Depth-Attention comparison, use
+`--patch_method vanilla_qknorm` versus `--patch_method depth_attention`. Both
+paths instantiate the same parameterization and QK-Norm modules; the only
+structural switch is cross-layer value mixing.
 
 ---
 

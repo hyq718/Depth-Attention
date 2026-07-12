@@ -390,12 +390,15 @@ class ModelArguments(QuantizationArguments, ProcessorArguments, ExportArguments,
         default=2048,
         metadata={"help": "The maximum position embeddings for model. Do not specify it."},
     )
-    patch_method: Optional[Literal["depth_attention", "attnres", "denseformer", "mhc", "vanilla"]] = field(
+    patch_method: Optional[
+        Literal["depth_attention", "vanilla_qknorm", "attnres", "denseformer", "mhc", "vanilla"]
+    ] = field(
         default=None,
         metadata={
             "help": (
                 "Which Llama implementation to swap in. "
                 "`depth_attention` = Depth-Attention / depth-softmax. "
+                "`vanilla_qknorm` = the same Llama implementation with QK-Norm but no depth mixing. "
                 "`attnres`, `denseformer`, `mhc` = comparison baselines. "
                 "`vanilla` or unset = standard transformers Llama."
             )

@@ -22,6 +22,7 @@ from llamafactory.model.llama_patch import (
     patch_llama_denseformer,
     patch_llama_depth_attention,
     patch_llama_mhc,
+    patch_llama_vanilla_qknorm,
 )
 
 
@@ -55,6 +56,8 @@ def config_for(method: str):
             depth_attention_stride=1,
             depth_attention_recent_window=0,
         )
+    elif method == "vanilla_qknorm":
+        data.update(use_depth_attention=False)
     elif method == "attnres":
         data.update(baseline_mode="attnres", attnres_block_size=4)
     elif method == "denseformer":
@@ -99,6 +102,7 @@ def test_one_step_train_save_load_round_trip(tmp_path, method, module):
     ("method", "patch_fn", "module"),
     [
         ("depth_attention", patch_llama_depth_attention, modeling_llama_depth_attention),
+        ("vanilla_qknorm", patch_llama_vanilla_qknorm, modeling_llama_depth_attention),
         ("attnres", patch_llama_attnres, modeling_llama_attnres),
         ("denseformer", patch_llama_denseformer, modeling_llama_denseformer),
         ("mhc", patch_llama_mhc, modeling_llama_mhc),
@@ -108,3 +112,18 @@ def test_auto_model_patch_selects_expected_llama_implementation(method, patch_fn
     patch_fn()
     model = AutoModelForCausalLM.from_config(config_for(method), trust_remote_code=True)
     assert isinstance(model, module.LlamaForCausalLM)
+
+
+def test_vanilla_qknorm_is_parameter_matched_to_depth_attention():
+    vanilla = modeling_llama_depth_attention.LlamaForCausalLM(config_for("vanilla_qknorm"))
+    depth = modeling_llama_depth_attention.LlamaForCausalLM(config_for("depth_attention"))
+
+    assert vanilla.config.use_depth_attention is False
+    assert depth.config.use_depth_attention is True
+    assert sum(p.numel() for p in vanilla.parameters()) == sum(p.numel() for p in depth.parameters())
+
+    vanilla_keys = set(vanilla.state_dict())
+    depth_keys = set(depth.state_dict())
+    assert vanilla_keys == depth_keys
+    assert sum(key.endswith("q_norm.weight") for key in vanilla_keys) == vanilla.config.num_hidden_layers
+    assert sum(key.endswith("k_norm.weight") for key in vanilla_keys) == vanilla.config.num_hidden_layers

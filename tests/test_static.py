@@ -33,6 +33,7 @@ def test_public_configs_use_reference_fields():
 
     expected_released = {
         "3b_depth_attention_qknorm_gqa4x": (None, 2048, "zeng123/Depth-attention-3B"),
+        "3b_vanilla_qknorm_gqa4x": ("vanilla_qknorm", 2048, "Llama-3B-Vanilla-QKNorm"),
         "3b_attnres_qknorm_gqa4x": ("attnres", 2048, "zeng123/AttnRes-3B"),
         "3b_denseformer_qknorm_gqa4x": ("denseformer", 2048, "zeng123/DenseFormer-3B"),
         "3b_mhc_qknorm_gqa4x": ("mhc", 2048, "zeng123/mHC-3B"),
@@ -43,6 +44,8 @@ def test_public_configs_use_reference_fields():
         if baseline_mode is None:
             assert data["use_depth_attention"] is True
             assert data["depth_attention_stride"] == data["num_hidden_layers"] // 2
+        elif baseline_mode == "vanilla_qknorm":
+            assert data["use_depth_attention"] is False
         else:
             assert data["baseline_mode"] == baseline_mode
         assert data["hidden_size"] == hidden_size
@@ -88,7 +91,7 @@ def test_no_private_paths_or_secrets():
 
 def test_patch_method_strings_are_depth_attention_specific():
     patch_file = (ROOT / "src" / "llamafactory" / "model" / "llama_patch.py").read_text()
-    for method in ["depth_attention", "attnres", "denseformer", "mhc"]:
+    for method in ["depth_attention", "vanilla_qknorm", "attnres", "denseformer", "mhc"]:
         assert method in patch_file
     assert "ponderlm" not in patch_file.lower()
 

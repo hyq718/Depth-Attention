@@ -15,9 +15,13 @@ Method mapping
 | attnres           | modeling_llama_attnres.py             | baseline_final        |
 | denseformer       | modeling_llama_denseformer.py         | depthsoftmax_baselines |
 | mhc               | modeling_llama_mhc.py                 | depthsoftmax_baselines |
+| vanilla_qknorm    | modeling_llama_depth_attention.py     | stock Llama + QK-Norm |
 | vanilla           | transformers stock                    | transformers          |
 
 The vanilla path leaves the stock ``transformers`` implementation in place.
+The ``vanilla_qknorm`` path intentionally uses the same reference Llama class
+as Depth-Attention with cross-layer mixing disabled.  This keeps every model
+detail identical between the controlled pair except Depth-Attention itself.
 """
 
 
@@ -32,6 +36,13 @@ def _swap_llama(cls) -> None:
 
 def patch_llama_depth_attention() -> None:
     """Use the Depth-Attention Llama implementation."""
+    from .modeling.modeling_llama_depth_attention import LlamaForCausalLM
+
+    _swap_llama(LlamaForCausalLM)
+
+
+def patch_llama_vanilla_qknorm() -> None:
+    """Use the reference Llama implementation with QK-Norm and no depth mixing."""
     from .modeling.modeling_llama_depth_attention import LlamaForCausalLM
 
     _swap_llama(LlamaForCausalLM)
