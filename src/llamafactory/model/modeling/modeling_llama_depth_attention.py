@@ -2675,6 +2675,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
         global_step: Optional[int],
         eval_prune_threshold: Optional[float] = None,
         num_logits_to_keep: int = 0,
+        num_items_in_batch: Optional[int] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
@@ -2719,8 +2720,14 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
         if labels is not None:
             shift_logits = logits_full[:, :-1, :].contiguous()
             shift_labels = labels[:, 1:].contiguous()
-            loss_fct = CrossEntropyLoss()
+            loss_fct = CrossEntropyLoss(reduction="sum" if num_items_in_batch is not None else "mean")
             loss = loss_fct(shift_logits.view(-1, self.config.vocab_size), shift_labels.view(-1))
+            if num_items_in_batch is not None:
+                # Transformers 4.46 passes the non-ignored token count across
+                # the whole gradient-accumulation window. Returning this
+                # micro-batch's summed CE divided by that shared count makes
+                # the accumulated loss/gradient equal the per-token mean.
+                loss = loss / num_items_in_batch
         try:
             self.last_lm_loss = float(loss.detach().cpu().item())
         except Exception:
@@ -2812,6 +2819,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
             global_step=global_step,
             eval_prune_threshold=eval_prune_threshold,
             num_logits_to_keep=num_logits_to_keep,
+            num_items_in_batch=loss_kwargs.get("num_items_in_batch"),
         )
 
 

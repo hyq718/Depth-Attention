@@ -127,3 +127,22 @@ def test_vanilla_qknorm_is_parameter_matched_to_depth_attention():
     assert vanilla_keys == depth_keys
     assert sum(key.endswith("q_norm.weight") for key in vanilla_keys) == vanilla.config.num_hidden_layers
     assert sum(key.endswith("k_norm.weight") for key in vanilla_keys) == vanilla.config.num_hidden_layers
+
+
+def test_causal_lm_loss_respects_gradient_accumulation_item_count():
+    model = modeling_llama_depth_attention.LlamaForCausalLM(config_for("vanilla_qknorm"))
+    model.eval()
+    input_ids = torch.tensor([[1, 14, 8, 2]])
+
+    with torch.no_grad():
+        mean_loss = model(input_ids=input_ids, labels=input_ids, use_cache=False).loss
+        # This micro-batch has 3 shifted labels. A total count of 6 models a
+        # two-micro-batch accumulation window with the same number of tokens.
+        window_loss = model(
+            input_ids=input_ids,
+            labels=input_ids,
+            use_cache=False,
+            num_items_in_batch=6,
+        ).loss
+
+    torch.testing.assert_close(window_loss, mean_loss / 2)
