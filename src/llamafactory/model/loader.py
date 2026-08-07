@@ -34,6 +34,7 @@ from .llama_patch import (
     patch_llama_mhc,
     patch_llama_vanilla_qknorm,
 )
+from .qwen3_p2n import patch_qwen3_p2n
 
 
 # patch_method -> llama patch fn. `vanilla` deliberately leaves the stock
@@ -44,6 +45,7 @@ _PATCH_METHODS = {
     "attnres": patch_llama_attnres,
     "denseformer": patch_llama_denseformer,
     "mhc": patch_llama_mhc,
+    "qwen3_p2n": patch_qwen3_p2n,
 }
 
 if TYPE_CHECKING:
@@ -247,6 +249,14 @@ def load_model(
         )
         config.residual_baseline_num_streams = num_streams
         config.mhc_num_streams = num_streams
+    elif model_args.patch_method == "qwen3_p2n":
+        if getattr(config, "model_type", None) != "qwen3":
+            raise ValueError("patch_method='qwen3_p2n' requires a Qwen3 config.")
+        config.use_p2n = True
+        config.p2n_variant = "v1"
+        config.p2n_jacobi_iterations = model_args.num_jacobi_iterations
+        config.p2n_jacobi_iterations_min = model_args.min_jacobi_iterations
+        config.p2n_random_iterations = model_args.random_jacobi_iterations
     else:
         config.use_depth_attention = False
 

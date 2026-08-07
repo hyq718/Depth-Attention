@@ -307,12 +307,16 @@ class ModelArguments(QuantizationArguments, ProcessorArguments, ExportArguments,
     )
     num_jacobi_iterations: int = field(
         default=3,
-        metadata={"help": "Reserved for compatibility; unused by Depth-Attention."},
+        metadata={"help": "Maximum number of P2N Jacobi updates."},
+    )
+    min_jacobi_iterations: int = field(
+        default=2,
+        metadata={"help": "Minimum number of P2N Jacobi updates when random sampling is enabled."},
     )
     random_jacobi_iterations: bool = field(
         default=False,
         metadata={
-            "help": "Reserved for compatibility; unused by Depth-Attention."
+            "help": "Uniformly sample the number of P2N Jacobi updates during training."
         },
     )
     interpolation: bool = field(
@@ -391,7 +395,7 @@ class ModelArguments(QuantizationArguments, ProcessorArguments, ExportArguments,
         metadata={"help": "The maximum position embeddings for model. Do not specify it."},
     )
     patch_method: Optional[
-        Literal["depth_attention", "vanilla_qknorm", "attnres", "denseformer", "mhc", "vanilla"]
+        Literal["depth_attention", "vanilla_qknorm", "attnres", "denseformer", "mhc", "qwen3_p2n", "vanilla"]
     ] = field(
         default=None,
         metadata={
@@ -400,6 +404,7 @@ class ModelArguments(QuantizationArguments, ProcessorArguments, ExportArguments,
                 "`depth_attention` = Depth-Attention / depth-softmax. "
                 "`vanilla_qknorm` = the same Llama implementation with QK-Norm but no depth mixing. "
                 "`attnres`, `denseformer`, `mhc` = comparison baselines. "
+                "`qwen3_p2n` = Qwen3 P2N-V1 with Jacobi training. "
                 "`vanilla` or unset = standard transformers Llama."
             )
         },
@@ -413,6 +418,14 @@ class ModelArguments(QuantizationArguments, ProcessorArguments, ExportArguments,
     def __post_init__(self):
         if self.model_name_or_path is None:
             raise ValueError("Please provide `model_name_or_path`.")
+
+        if self.patch_method == "qwen3_p2n":
+            if self.num_jacobi_iterations < 1:
+                raise ValueError("`num_jacobi_iterations` must be at least one.")
+            if not 1 <= self.min_jacobi_iterations <= self.num_jacobi_iterations:
+                raise ValueError(
+                    "P2N requires 1 <= `min_jacobi_iterations` <= `num_jacobi_iterations`."
+                )
 
         if self.split_special_tokens and self.use_fast_tokenizer:
             raise ValueError("`split_special_tokens` is only supported for slow tokenizers.")
